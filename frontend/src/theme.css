@@ -10,6 +10,7 @@
   --sr-green-light: #77C16E; /* "Get Involved" section */
   --sr-maroon: #9D2235;      /* Enactus / Saint Mary's section; we also use it for warnings */
   --sr-cream: #F7F7F1;       /* header and page background */
+  --sr-soil: #20271E;        /* darkest green in the site's theme; used for code boxes */
   --sr-white: #FFFFFF;
   --sr-ink: #000000;
   --sr-ink-soft: #3E3E3C;
@@ -64,6 +65,12 @@ p { margin: 0 0 1em; }
 a { color: inherit; }
 
 img { max-width: 100%; display: block; }
+
+code,
+pre {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
 
 :focus-visible {
   outline: 3px solid var(--sr-green-dark);

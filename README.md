@@ -67,7 +67,11 @@ Run `python manage.py seed` again at any time to reset the demo data.
 
 The `admin` account can also open Django's built-in data admin at http://127.0.0.1:8000/django-admin/.
 
-## Running the tests
+## Testing logins and the API
+
+There are three ways to check that logins work.
+
+**1. Automated tests (run these after any change).** They run in a few seconds and need no browser:
 
 ```bash
 cd backend
@@ -75,13 +79,37 @@ source .venv/bin/activate
 python manage.py test
 ```
 
+They cover correct and wrong passwords, unknown usernames, blank forms, case-sensitive
+passwords, switched-off accounts, logging out, CSRF protection, every demo account's role, and
+which roles can use which API. They live in `backend/accounts/tests.py` and `backend/config/tests.py`.
+
+**2. The admin API page.** Log in as `admin` and open **API** in the menu (`/admin/api`). It has:
+- **Endpoints**: every API the portal uses, who can use it and what it does. The server builds this
+  list itself, so new APIs show up automatically. Write a one-line docstring on each API view,
+  because that's where the description comes from. GET endpoints have a **Try it** button.
+- **Test a login**: type any username and password to see whether it would log in, and why
+  not if it wouldn't. You stay logged in as admin.
+- **Run all login checks**: one button that tries every demo account and the common mistakes.
+
+**3. From a terminal with curl**, to see exactly what the server sends back:
+
+```bash
+curl -c jar.txt http://localhost:5173/api/auth/csrf/
+TOKEN=$(grep csrftoken jar.txt | awk '{print $7}')
+curl -b jar.txt -c jar.txt -H "X-CSRFToken: $TOKEN" -H "Content-Type: application/json" \
+     -d '{"username":"cm.dartmouth","password":"squareroots"}' http://localhost:5173/api/auth/login/
+curl -b jar.txt http://localhost:5173/api/auth/me/
+```
+
 ## How the code is organised
 
 ```
 backend/                 Django + Django REST Framework
   config/                settings and top-level URLs
+    api_catalog.py       builds the list of APIs for the admin API page
   accounts/              users, roles, login/logout API
     models.py            User with a `role` field
+    views.py             login, logout, "who am I", and the admin login checker
     permissions.py       IsAdminRole, IsCommunityManager, IsFarm, IsHostSite
     management/commands/seed.py   demo data
 frontend/                React (Vite), plain CSS
@@ -93,6 +121,7 @@ frontend/                React (Vite), plain CSS
     App.jsx              which page shows at which web address
     api.js               talks to Django (handles login cookies and CSRF)
     auth.jsx             who is logged in
+    demoAccounts.js      demo usernames (must match the backend seed command)
     components/          header/menu layout, footer, yellow page hero
     pages/               one file per screen
 ```

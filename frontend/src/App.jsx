@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import ComingSoonPage from './pages/ComingSoonPage'
+import ApiPage from './pages/ApiPage'
 
 // Only lets a logged-in user with the right role through.
 function RequireRole({ role }) {
@@ -19,6 +20,7 @@ function RequireRole({ role }) {
 // add them here, e.g.  if (item.to === '/admin/cycles') return <DropCyclesPage />
 function pageFor(item, roleConfig) {
   if (item.to === roleConfig.home) return <HomePage />
+  if (item.to === '/admin/api') return <ApiPage />
   return <ComingSoonPage item={item} />
 }
 

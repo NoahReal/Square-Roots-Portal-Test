@@ -14,7 +14,8 @@ export default function Layout() {
   }
 
   // Only show the phone tab bar if there's more than one screen to switch between.
-  const showTabs = role.nav.length > 1
+  const tabs = role.nav.filter((item) => item.inTabBar !== false)
+  const showTabs = tabs.length > 1
 
   return (
     <div className={'app' + (showTabs ? ' has-tab-bar' : '')}>
@@ -57,7 +58,7 @@ export default function Layout() {
 
       {showTabs && (
         <nav className="tab-bar" aria-label="Main">
-          {role.nav.map((item) => (
+          {tabs.map((item) => (
             <NavLink key={item.to} to={item.to} end>
               {item.label}
             </NavLink>

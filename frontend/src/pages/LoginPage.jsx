@@ -3,17 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { homeFor } from '../roles'
 import Footer from '../components/Footer'
-
-// Prototype only: these match the accounts created by `python manage.py seed`.
-// Tapping one fills in the form so demos go quickly.
-const DEMO_PASSWORD = 'squareroots'
-const DEMO_ACCOUNTS = [
-  { username: 'admin', who: 'Maya Chen', role: 'Admin' },
-  { username: 'cm.dartmouth', who: 'Jordan MacLeod', role: 'Community Manager' },
-  { username: 'cm.bedford', who: 'Aisha Rahman', role: 'Community Manager' },
-  { username: 'farm.gaspereau', who: 'Ruth Eisenhauer', role: 'Farm' },
-  { username: 'host.dartmouth', who: 'Grace Oickle', role: 'Host Site' },
-]
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../demoAccounts'
 
 export default function LoginPage() {
   const { login } = useAuth()

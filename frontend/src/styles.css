@@ -293,6 +293,10 @@
   font-weight: 500;
 }
 
+.btn + .notice {
+  margin-top: 16px;
+}
+
 .notice-error {
   background: var(--sr-maroon);
   color: var(--sr-white);
@@ -332,6 +336,98 @@
   text-align: center;
   font-size: 0.9rem;
   padding: 8px var(--gutter);
+}
+
+/* A section with a white background, to separate it from the cream ones around it */
+.section-tinted {
+  background: var(--sr-white);
+}
+
+/* ---------- API page ---------- */
+
+.endpoint-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.endpoint-path {
+  font-size: 1.05rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.endpoint-who {
+  font-size: 0.95rem;
+}
+
+.tag-method {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-weight: 700;
+}
+
+.tag-get {
+  background: var(--sr-green-dark);
+  border-color: var(--sr-green-dark);
+  color: var(--sr-white);
+}
+
+.tag-post {
+  background: var(--sr-yellow);
+  border-color: var(--sr-ink);
+}
+
+.json {
+  margin: 16px 0 0;
+  padding: 16px;
+  background: var(--sr-soil);
+  color: var(--sr-cream);
+  overflow-x: auto;
+  white-space: pre;
+  line-height: 1.5;
+}
+
+.json-error {
+  background: var(--sr-maroon);
+}
+
+.login-tester {
+  max-width: 480px;
+  margin-bottom: 20px;
+}
+
+.check-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.check-list li {
+  display: flex;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-green-dark);
+  overflow-wrap: anywhere;
+}
+
+.check-list li.check-fail {
+  border-left-color: var(--sr-maroon);
+}
+
+.check-mark {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--sr-green-dark);
+}
+
+.check-fail .check-mark {
+  color: var(--sr-maroon);
 }
 
 /* ---------- Login page ---------- */
@@ -399,8 +495,8 @@
     align-items: center;
   }
 
-  .user-menu-name {
-    display: block;
+  .top-nav a {
+    padding: 0 14px;
   }
 
   .brand img {
@@ -438,5 +534,17 @@
   .login-form-side,
   .login-message-side {
     padding: 72px 64px;
+  }
+}
+
+/* ---------- Large screens: roomier menu, show the user's name ---------- */
+
+@media (min-width: 1200px) {
+  .top-nav a {
+    padding: 0 28px;
+  }
+
+  .user-menu-name {
+    display: block;
   }
 }

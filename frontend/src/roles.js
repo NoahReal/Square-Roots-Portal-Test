@@ -1,6 +1,7 @@
 // What each role sees in the menu. Add a screen here and it shows up in
 // the desktop menu, the phone tab bar and the role's home page.
 // `ready: false` screens show a "coming soon" page until they're built.
+// `inTabBar: false` keeps a screen out of the phone tab bar (it still shows on the home page).
 
 export const ROLES = {
   admin: {
@@ -13,6 +14,8 @@ export const ROLES = {
       { to: '/admin/orders', label: 'Orders', ready: false, description: 'See every site’s bundle order and the purchase list for each farm.' },
       { to: '/admin/farms', label: 'Farms', ready: false, description: 'See what farms have available and decide who supplies what.' },
       { to: '/admin/impact', label: 'Impact', ready: false, description: 'Pounds diverted, bundles sold, sites active. Download as CSV.' },
+      // Behind-the-scenes tool, so it stays out of the phone tab bar.
+      { to: '/admin/api', label: 'API', ready: true, inTabBar: false, description: 'Every API the portal uses, and a tool for testing logins.' },
     ],
   },
   community_manager: {
