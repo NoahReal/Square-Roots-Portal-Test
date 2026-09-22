@@ -1,0 +1,71 @@
+/*
+  Square Roots design tokens, taken from squarerootssmu.ca.
+  Change a colour or font here and it changes everywhere.
+*/
+:root {
+  /* Colours */
+  --sr-yellow: #FBB530;      /* Mission / Impact / Support blocks */
+  --sr-green-dark: #417150;  /* band under the hero, headings */
+  --sr-green: #4E8359;       /* footer */
+  --sr-green-light: #77C16E; /* "Get Involved" section */
+  --sr-maroon: #9D2235;      /* Enactus / Saint Mary's section; we also use it for warnings */
+  --sr-cream: #F7F7F1;       /* header and page background */
+  --sr-white: #FFFFFF;
+  --sr-ink: #000000;
+  --sr-ink-soft: #3E3E3C;
+  --sr-line: #B9B9B5;
+
+  /* Fonts */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Heebo', Arial, Helvetica, sans-serif;
+
+  /* Sizes */
+  --tap: 48px;           /* smallest thing anyone should have to tap */
+  --gutter: 16px;
+  --content-width: 980px; /* same as the Wix site */
+  --radius: 0;           /* the site uses hard, square edges everywhere */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--sr-cream);
+  color: var(--sr-ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0 0 0.4em;
+}
+
+h1 { font-size: clamp(2.25rem, 7vw, 3.75rem); }
+h2 { font-size: clamp(1.6rem, 4.5vw, 2.25rem); }
+h3 { font-size: 1.35rem; }
+
+p { margin: 0 0 1em; }
+
+a { color: inherit; }
+
+img { max-width: 100%; display: block; }
+
+:focus-visible {
+  outline: 3px solid var(--sr-green-dark);
+  outline-offset: 2px;
+}

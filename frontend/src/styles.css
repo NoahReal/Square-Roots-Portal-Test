@@ -1,0 +1,442 @@
+/*
+  Shared layout and components. Colours and fonts come from theme.css.
+  Mobile first: the base styles are for phones, the @media blocks add desktop layout.
+*/
+
+/* ---------- Page frame ---------- */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.section {
+  padding: 32px 0;
+}
+
+/* ---------- Header (cream bar with logo, like the live site) ---------- */
+
+.site-header {
+  background: var(--sr-cream);
+  border-bottom: 1px solid var(--sr-line);
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 72px;
+  padding: 8px var(--gutter);
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.brand img {
+  width: 64px;
+  height: auto;
+}
+
+.brand-label {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.brand-label small {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--sr-ink-soft);
+}
+
+/* Desktop nav: serif links with thin vertical dividers, as on the site. Hidden on phones. */
+.top-nav {
+  display: none;
+}
+
+.top-nav a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 28px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  text-decoration: none;
+  border-left: 1px solid var(--sr-ink);
+  border-bottom: 4px solid transparent;
+}
+
+.top-nav a:first-child {
+  border-left: 0;
+}
+
+.top-nav a.active {
+  border-bottom-color: var(--sr-yellow);
+  font-weight: 700;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-menu-name {
+  display: none;
+  text-align: right;
+  line-height: 1.2;
+}
+
+.user-menu-name small {
+  display: block;
+  color: var(--sr-ink-soft);
+}
+
+/* The green band that sits under the hero on the live site */
+.green-band {
+  height: 10px;
+  background: var(--sr-green-dark);
+}
+
+/* ---------- Bottom tab bar (phones only) ---------- */
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  background: var(--sr-cream);
+  border-top: 3px solid var(--sr-green-dark);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-bar a {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  padding: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.tab-bar a.active {
+  background: var(--sr-yellow);
+}
+
+/* Room so the tab bar never covers the footer */
+.has-tab-bar {
+  padding-bottom: 64px;
+}
+
+/* ---------- Page hero (the yellow "Mission / Impact" block) ---------- */
+
+.page-hero {
+  background: var(--sr-yellow);
+  padding: 40px 0 36px;
+}
+
+.page-hero h1 {
+  margin-bottom: 8px;
+}
+
+.page-hero .lead {
+  font-size: 1.2rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+/* ---------- Colour blocks ---------- */
+
+.block {
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.block-white { background: var(--sr-white); }
+.block-yellow { background: var(--sr-yellow); }
+.block-green { background: var(--sr-green-light); }
+.block-maroon { background: var(--sr-maroon); color: var(--sr-white); }
+.block-forest { background: var(--sr-green-dark); color: var(--sr-white); }
+
+.block h2,
+.block h3 {
+  margin-bottom: 8px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid .block {
+  margin-bottom: 0;
+}
+
+.muted {
+  color: var(--sr-ink-soft);
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid currentColor;
+}
+
+/* ---------- Buttons: outlined and square, like the site ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  padding: 0 28px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* One filled button per screen for the main action */
+.btn-primary {
+  background: var(--sr-green-dark);
+  border-color: var(--sr-green-dark);
+  color: var(--sr-white);
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: var(--sr-green);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 0.9rem;
+}
+
+/* ---------- Forms ---------- */
+
+.field {
+  margin-bottom: 20px;
+}
+
+.field label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 1px solid var(--sr-ink);
+  border-radius: var(--radius);
+  background: var(--sr-white);
+  font-family: var(--font-body);
+  font-size: 1.05rem; /* 16px or more stops iPhones zooming in */
+}
+
+.notice {
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.notice-error {
+  background: var(--sr-maroon);
+  color: var(--sr-white);
+}
+
+.notice-success {
+  background: var(--sr-green-dark);
+  color: var(--sr-white);
+}
+
+/* ---------- Footer (green, then the yellow copyright bar) ---------- */
+
+.site-footer {
+  background: var(--sr-green);
+  color: var(--sr-white);
+  padding: 32px 0 24px;
+}
+
+.footer-cols {
+  display: grid;
+  gap: 20px;
+}
+
+.footer-cols h3 {
+  font-size: 1.25rem;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.footer-cols p {
+  margin: 0;
+  font-weight: 300;
+}
+
+.copyright {
+  background: var(--sr-yellow);
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 8px var(--gutter);
+}
+
+/* ---------- Login page ---------- */
+
+.login-split {
+  display: grid;
+}
+
+.login-form-side {
+  background: var(--sr-yellow);
+  padding: 40px var(--gutter);
+}
+
+.login-form-side form {
+  max-width: 420px;
+}
+
+.login-message-side {
+  background: var(--sr-green-dark);
+  color: var(--sr-white);
+  padding: 40px var(--gutter);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-message-side h2 {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+}
+
+.demo-accounts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.demo-accounts button {
+  width: 100%;
+  min-height: var(--tap);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--sr-white);
+  border: 1px solid var(--sr-line);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.demo-accounts button:hover {
+  border-color: var(--sr-ink);
+}
+
+/* ---------- Desktop ---------- */
+
+@media (min-width: 800px) {
+  .top-nav {
+    display: flex;
+    align-items: center;
+  }
+
+  .user-menu-name {
+    display: block;
+  }
+
+  .brand img {
+    width: 88px;
+  }
+
+  .tab-bar {
+    display: none;
+  }
+
+  .has-tab-bar {
+    padding-bottom: 0;
+  }
+
+  .page-hero {
+    padding: 64px 0 56px;
+  }
+
+  .section {
+    padding: 48px 0;
+  }
+
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+  .footer-cols {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .login-split {
+    grid-template-columns: 1fr 1fr;
+    min-height: 560px;
+  }
+
+  .login-form-side,
+  .login-message-side {
+    padding: 72px 64px;
+  }
+}
