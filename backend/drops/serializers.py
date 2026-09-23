@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from .models import BUNDLE_POUNDS, DropReport, OperatingSettings, Preorder, Site, SiteDrop
 from .money import for_json, statement
+from .reservations import amount_due
 
 
 class SiteSerializer(serializers.ModelSerializer):
@@ -24,13 +25,15 @@ class SiteSerializer(serializers.ModelSerializer):
 
 class PreorderSerializer(serializers.ModelSerializer):
     price_tier_label = serializers.CharField(source="get_price_tier_display", read_only=True)
+    amount_due = serializers.SerializerMethodField()
 
     class Meta:
         model = Preorder
         fields = [
-            "id", "customer_name", "phone", "bundles", "price_tier", "price_tier_label",
-            "delivery", "delivery_address", "paid", "picked_up",
+            "id", "customer_name", "phone", "email", "bundles", "price_tier", "price_tier_label",
+            "delivery", "delivery_address", "paid", "picked_up", "source", "pickup_code", "amount_due",
         ]
+        read_only_fields = ["source", "pickup_code"]
         extra_kwargs = {
             "customer_name": {"error_messages": {"blank": "Please add the customer's name."}},
             "bundles": {"error_messages": {"invalid": "Enter a number of bundles, like 2."}},
@@ -38,6 +41,9 @@ class PreorderSerializer(serializers.ModelSerializer):
 
     def validate_customer_name(self, value):
         return value.strip()
+
+    def get_amount_due(self, preorder):
+        return f"{amount_due(preorder):.2f}"
 
     def validate_bundles(self, value):
         if value < 1:
@@ -96,6 +102,10 @@ class SiteDropSerializer(serializers.ModelSerializer):
     picked_up_count = serializers.SerializerMethodField()
     delivery_count = serializers.SerializerMethodField()
     delivery_partner = serializers.CharField(source="site.delivery_partner", read_only=True)
+    online_reservations = serializers.BooleanField(source="site.online_reservations", read_only=True)
+    reservation_limit = serializers.IntegerField(source="site.reservation_limit", read_only=True)
+    online_count = serializers.SerializerMethodField()
+    waitlist = serializers.SerializerMethodField()
     report = serializers.SerializerMethodField()
     statement = serializers.SerializerMethodField()
 
@@ -105,7 +115,7 @@ class SiteDropSerializer(serializers.ModelSerializer):
             "id", "cycle_name", "site_name", "drop_date", "starts_at", "ends_at", "order_cutoff",
             "ordering_open", "has_happened", "bundles", "order_updated_at",
             "preorder_count", "preorder_bundles", "picked_up_count", "delivery_count", "delivery_partner",
-            "report", "statement",
+            "online_reservations", "reservation_limit", "online_count", "waitlist", "report", "statement",
         ]
 
     def _order(self, site_drop):
@@ -130,6 +140,15 @@ class SiteDropSerializer(serializers.ModelSerializer):
 
     def get_delivery_count(self, site_drop):
         return sum(1 for p in site_drop.preorders.all() if p.delivery)
+
+    def get_online_count(self, site_drop):
+        return sum(1 for p in site_drop.preorders.all() if p.source == Preorder.Source.ONLINE)
+
+    def get_waitlist(self, site_drop):
+        return [
+            {"customer_name": w.customer_name, "bundles": w.bundles, "phone": w.phone, "email": w.email}
+            for w in site_drop.waitlist.all()
+        ]
 
     def get_statement(self, site_drop):
         # Look the prices up once per list, not once per drop.

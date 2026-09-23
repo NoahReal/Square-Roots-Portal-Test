@@ -1,12 +1,16 @@
 from django.urls import path
 
-from . import views, views_admin, views_manager, views_operations
+from . import views, views_admin, views_manager, views_operations, views_reserve
 
 urlpatterns = [
     # Public
     path("sites/", views.SiteListView.as_view()),
     path("drop-dates/", views.DropDatesView.as_view()),
     path("pricing/", views.PricingView.as_view()),
+    # Customers reserving bundles (public, no account)
+    path("reserve/options/", views_reserve.ReserveOptionsView.as_view()),
+    path("reserve/", views_reserve.ReserveView.as_view()),
+    path("reserve/<str:token>/", views_reserve.ManageReservationView.as_view()),
     # Host sites
     path("host/drops/", views.HostDropListView.as_view()),
     # Community Managers
@@ -14,7 +18,9 @@ urlpatterns = [
     path("manager/drops/<int:pk>/order/", views_manager.OrderView.as_view()),
     path("manager/drops/<int:pk>/preorders/", views_manager.PreorderListView.as_view()),
     path("manager/drops/<int:pk>/report/", views_manager.DropReportView.as_view()),
+    path("manager/drops/<int:pk>/pickup/<str:code>/", views_manager.PickupCodeView.as_view()),
     path("manager/preorders/<int:pk>/", views_manager.PreorderDetailView.as_view()),
+    path("manager/reservations/", views_manager.ReservationSettingsView.as_view()),
     # Admins
     path("admin/cycles/", views_admin.CycleListView.as_view()),
     path("admin/cycles/<int:pk>/", views_admin.CycleDetailView.as_view()),

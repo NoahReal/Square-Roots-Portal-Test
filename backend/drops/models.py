@@ -1,3 +1,4 @@
+import secrets
 from datetime import time
 from decimal import Decimal
 
@@ -62,6 +63,15 @@ class Site(models.Model):
     # before they were added to the portal shouldn't, so this is off unless the team turns it on.
     first_drop_pricing = models.BooleanField(
         default=False, help_text="Charge the first-drop price at this location's first drop (for brand-new locations)."
+    )
+    # Customers can reserve bundles on the website when this is on.
+    online_reservations = models.BooleanField(
+        default=False, help_text="Let customers reserve bundles for this location on the website."
+    )
+    reservation_limit = models.PositiveIntegerField(
+        default=20,
+        help_text="Bundles set aside for reservations at each drop, online and through the Community Manager. "
+        "When they're gone, customers can join a waitlist.",
     )
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
@@ -128,23 +138,47 @@ class BundleOrder(models.Model):
         return f"{self.bundles} bundles for {self.site_drop}"
 
 
+# Pickup codes use letters and numbers that are hard to mix up (no O and 0, no I and 1).
+PICKUP_CODE_CHARACTERS = "ACDEFHJKMNPRTUVWXY34679"
+
+
+def new_manage_token():
+    """The secret part of a customer's "change or cancel your reservation" link."""
+    return secrets.token_urlsafe(24)
+
+
+class PriceTier(models.TextChoices):
+    """The sliding scale: customers choose what works for them, no questions asked."""
+
+    STANDARD = "standard", "Standard"
+    AT_COST = "at_cost", "At cost"
+    FREE = "free", "Free"
+
+
 class Preorder(models.Model):
-    """A customer who reserved bundles at a drop. Community Managers keep this list."""
+    """A customer who reserved bundles at a drop, online or through their Community Manager."""
+
+    PriceTier = PriceTier
+
+    class Source(models.TextChoices):
+        MANAGER = "manager", "Added by the Community Manager"
+        ONLINE = "online", "Reserved online"
 
     site_drop = models.ForeignKey(SiteDrop, on_delete=models.CASCADE, related_name="preorders")
     customer_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=30, blank=True)
-    class PriceTier(models.TextChoices):
-        STANDARD = "standard", "Standard"
-        AT_COST = "at_cost", "At cost"
-        FREE = "free", "Free"
-
+    email = models.EmailField(blank=True)
     bundles = models.PositiveSmallIntegerField(default=1)
     price_tier = models.CharField(max_length=16, choices=PriceTier.choices, default=PriceTier.STANDARD)
     delivery = models.BooleanField(default=False, help_text="Home delivery instead of picking up at the drop.")
     delivery_address = models.CharField(max_length=200, blank=True)
     paid = models.BooleanField(default=False)
     picked_up = models.BooleanField(default=False)
+    source = models.CharField(max_length=16, choices=Source.choices, default=Source.MANAGER)
+    # A short code the customer shows at the drop, e.g. "K7M4". Unique within the drop.
+    pickup_code = models.CharField(max_length=4, blank=True)
+    # Only for online reservations: the secret in the customer's "change or cancel" link.
+    manage_token = models.CharField(max_length=40, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -152,6 +186,39 @@ class Preorder(models.Model):
 
     def __str__(self):
         return f"{self.customer_name} ({self.bundles})"
+
+    def save(self, *args, **kwargs):
+        if not self.pickup_code:
+            taken = set(Preorder.objects.filter(site_drop=self.site_drop_id).values_list("pickup_code", flat=True))
+            while not self.pickup_code or self.pickup_code in taken:
+                self.pickup_code = "".join(secrets.choice(PICKUP_CODE_CHARACTERS) for _ in range(4))
+        super().save(*args, **kwargs)
+
+
+class WaitlistEntry(models.Model):
+    """Someone waiting for a bundle at a drop whose reservations are all taken.
+
+    When a reservation is cancelled, the first person in line whose request fits
+    gets a reservation automatically (see drops/reservations.py).
+    """
+
+    site_drop = models.ForeignKey(SiteDrop, on_delete=models.CASCADE, related_name="waitlist")
+    customer_name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    bundles = models.PositiveSmallIntegerField(default=1)
+    price_tier = models.CharField(max_length=16, choices=PriceTier.choices, default=PriceTier.STANDARD)
+    delivery = models.BooleanField(default=False)
+    delivery_address = models.CharField(max_length=200, blank=True)
+    manage_token = models.CharField(max_length=40, db_index=True, default=new_manage_token)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        verbose_name_plural = "waitlist entries"
+
+    def __str__(self):
+        return f"{self.customer_name} waiting for {self.bundles} at {self.site_drop}"
 
 
 class DropReport(models.Model):

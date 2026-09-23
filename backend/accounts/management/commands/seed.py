@@ -17,7 +17,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import Application, User
-from drops.models import BundleOrder, DropCycle, DropReport, OperatingSettings, Preorder, Site, SiteDrop
+from drops.models import (
+    BundleOrder, DropCycle, DropReport, OperatingSettings, Preorder, Site, SiteDrop, WaitlistEntry, new_manage_token,
+)
 from farms.models import Farm, FarmOrder, FarmOrderLine, ProduceListing
 from website.models import ContactMessage, Event
 
@@ -44,6 +46,9 @@ DELIVERY_PARTNERS = {"Upper Tantallon": "BayRides"}
 
 # Made-up addresses for demo home deliveries.
 DELIVERY_ADDRESSES = ["12 Peggy's Cove Rd", "48 Hubley Mill Lake Rd", "7 Boutiliers Point Rd", "215 Hammonds Plains Rd"]
+
+# Locations that haven't turned on online reservations yet (so the demo shows that case too).
+NO_ONLINE_RESERVATIONS = {"Middle Musquodoboit"}
 
 # Made-up ordering habits for the demo: (usual bundles per drop, month the location started this year, drop hours)
 SITE_HABITS = {
@@ -168,6 +173,8 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         self.random = random.Random(2026)
+        # Separate, so adding reservations doesn't change the rest of the demo numbers.
+        self.reservation_random = random.Random(10)
         self.today = timezone.localdate()
 
         self.delete_everything()
@@ -211,6 +218,10 @@ class Command(BaseCommand):
                 highlight=highlight, sort_order=order, delivery_partner=DELIVERY_PARTNERS.get(name, ""),
                 # Only the newest location started this year with the first-drop incentive.
                 first_drop_pricing=name == "New Glasgow",
+                online_reservations=name not in NO_ONLINE_RESERVATIONS,
+                # About half of a location's usual bundles are set aside for reservations.
+                # The North End is kept small so its next drop fills up and shows the waitlist.
+                reservation_limit=12 if name == "Halifax - North End" else round_to(SITE_HABITS[name][0] / 2, 2),
             )
         return sites
 
@@ -300,6 +311,8 @@ class Command(BaseCommand):
                 )
                 counts["site_drops"] += 1
                 bundles_total += self.fill_site_drop(site_drop, number, usual, users)
+                if number == 1 and site.online_reservations:
+                    self.add_online_reservations(site_drop)
             counts["farm_orders"] += self.create_farm_orders(cycle, number, bundles_total, farms)
             drop_date += timedelta(weeks=2)
         return counts
@@ -358,6 +371,34 @@ class Command(BaseCommand):
                     phone=f"902-555-{self.random.randint(1000, 9999)}", paid=True,
                 )
         return bundles
+
+    def add_online_reservations(self, site_drop):
+        """Customers who have reserved online for the drop in two weeks. The North End is full, with a waitlist."""
+        rnd = self.reservation_random
+        limit = site_drop.site.reservation_limit
+        full = site_drop.site.name == "Halifax - North End"
+        target = limit if full else rnd.randint(1, max(1, limit // 3))
+        customers = rnd.sample(CUSTOMERS, len(CUSTOMERS))
+        reserved = 0
+        while reserved < target and customers:
+            name = customers.pop()
+            bundles = min(rnd.choice([1, 1, 1, 2]), target - reserved)
+            delivery = bool(site_drop.site.delivery_partner) and rnd.random() < 0.3
+            Preorder.objects.create(
+                site_drop=site_drop, customer_name=name, bundles=bundles, source=Preorder.Source.ONLINE,
+                email=f"{name.split()[0].lower()}{rnd.randint(10, 99)}@example.com",
+                phone=f"902-555-{rnd.randint(1000, 9999)}" if rnd.random() < 0.4 else "",
+                price_tier=rnd.choice(["standard"] * 7 + ["at_cost"] * 2 + ["free"]),
+                delivery=delivery, delivery_address=rnd.choice(DELIVERY_ADDRESSES) if delivery else "",
+                manage_token=new_manage_token(),
+            )
+            reserved += bundles
+        if full:
+            for name in customers[:2]:
+                WaitlistEntry.objects.create(
+                    site_drop=site_drop, customer_name=name, bundles=1,
+                    email=f"{name.split()[0].lower()}{rnd.randint(10, 99)}@example.com",
+                )
 
     def create_farm_orders(self, cycle, number, bundles_total, farms):
         """Buys the produce for a cycle from the farms. Returns how many orders it made."""

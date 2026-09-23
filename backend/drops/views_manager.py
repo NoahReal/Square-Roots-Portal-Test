@@ -5,12 +5,13 @@ from datetime import timedelta
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsCommunityManager
 from .models import BundleOrder, Preorder, SiteDrop
+from .reservations import promote_waitlist
 from .serializers import DropReportSerializer, PreorderSerializer, SiteDropSerializer
 
 # Nobody orders more than this at once; it catches typos like 2000 instead of 20.
@@ -29,7 +30,7 @@ def my_site_drop(request, pk):
 
 
 def with_details(site_drops):
-    return site_drops.select_related("cycle", "site", "order", "report").prefetch_related("preorders")
+    return site_drops.select_related("cycle", "site", "order", "report").prefetch_related("preorders", "waitlist")
 
 
 class ManagerDropListView(generics.ListAPIView):
@@ -91,7 +92,62 @@ class PreorderDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         check_delivery_offered(serializer.instance.site_drop, serializer.validated_data)
-        serializer.save()
+        before = serializer.instance.bundles
+        preorder = serializer.save()
+        if preorder.bundles < before:
+            promote_waitlist(preorder.site_drop, site_url(self.request))
+
+    def perform_destroy(self, preorder):
+        site_drop = preorder.site_drop
+        preorder.delete()
+        # Bundles freed up here go to the next person on the waitlist.
+        promote_waitlist(site_drop, site_url(self.request))
+
+
+def site_url(request):
+    return f"{request.scheme}://{request.get_host()}"
+
+
+class PickupCodeView(APIView):
+    """Finds the reservation with a pickup code at one of your drops, so you can mark it paid and picked up (Community Managers)."""
+
+    permission_classes = [IsCommunityManager]
+
+    def get(self, request, pk, code):
+        site_drop = my_site_drop(request, pk)
+        code = code.strip().upper()
+        preorder = site_drop.preorders.filter(pickup_code=code).first()
+        if preorder is None:
+            raise NotFound(f"No reservation has the code {code} at this drop. Check the letters, or search by name.")
+        return Response(PreorderSerializer(preorder).data)
+
+
+class ReservationSettingsView(APIView):
+    """Turns online reservations on or off for your location, and sets how many bundles people can reserve per drop (Community Managers)."""
+
+    permission_classes = [IsCommunityManager]
+
+    def get(self, request):
+        site = site_for(request)
+        return Response({"online_reservations": site.online_reservations, "reservation_limit": site.reservation_limit})
+
+    def patch(self, request):
+        site = site_for(request)
+        if "online_reservations" in request.data:
+            site.online_reservations = bool(request.data["online_reservations"])
+        if "reservation_limit" in request.data:
+            try:
+                limit = int(request.data["reservation_limit"])
+            except (TypeError, ValueError):
+                raise ValidationError({"reservation_limit": "Enter a number of bundles."})
+            if not 0 <= limit <= MAX_BUNDLES:
+                raise ValidationError({"reservation_limit": f"Enter a number from 0 to {MAX_BUNDLES}."})
+            site.reservation_limit = limit
+        site.save(update_fields=["online_reservations", "reservation_limit"])
+        # More room may let people off the waitlist.
+        for site_drop in SiteDrop.objects.filter(site=site, order_cutoff__gt=timezone.now()):
+            promote_waitlist(site_drop, site_url(request))
+        return self.get(request)
 
 
 def check_delivery_offered(site_drop, data):

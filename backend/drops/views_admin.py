@@ -115,6 +115,8 @@ def site_drop_row(site_drop):
         "has_happened": site_drop.has_happened,
         "bundles": order.bundles if order else None,
         "preorder_bundles": sum(p.bundles for p in preorders),
+        "online_bundles": sum(p.bundles for p in preorders if p.source == "online"),
+        "waitlist_bundles": sum(w.bundles for w in site_drop.waitlist.all()),
         "report": {"bundles_sold": report.bundles_sold, "bundles_left_over": report.bundles_left_over} if report else None,
     }
 
@@ -129,7 +131,7 @@ class CycleDetailView(APIView):
 
     def get(self, request, pk):
         cycle = get_object_or_404(DropCycle, pk=pk)
-        site_drops = cycle.site_drops.select_related("site", "order", "report").prefetch_related("preorders")
+        site_drops = cycle.site_drops.select_related("site", "order", "report").prefetch_related("preorders", "waitlist")
         rows = [site_drop_row(d) for d in site_drops]
         bundles = sum(row["bundles"] or 0 for row in rows)
         farm_orders = (
@@ -251,7 +253,8 @@ class LocationSerializer(serializers.ModelSerializer):
         model = Site
         fields = [
             "id", "name", "address", "instagram_url", "facebook_url", "highlight", "delivery_partner",
-            "first_drop_pricing", "is_active", "sort_order", "people", "drops_this_year",
+            "first_drop_pricing", "online_reservations", "reservation_limit", "is_active", "sort_order", "people",
+            "drops_this_year",
         ]
         extra_kwargs = {
             "name": {"error_messages": {"blank": "Give the location a name, like “Lower Sackville”."}},

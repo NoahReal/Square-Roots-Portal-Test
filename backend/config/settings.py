@@ -90,6 +90,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
+    # Public forms that anyone can send (like reserving a bundle) are limited per visitor, to stop spam.
+    'DEFAULT_THROTTLE_RATES': {'reservations': '30/hour'},
 }
 
 # Demo mode shows the demo accounts on the login page and labels the made-up data.
