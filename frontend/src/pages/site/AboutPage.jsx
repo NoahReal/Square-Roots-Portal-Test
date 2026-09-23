@@ -55,25 +55,25 @@ export default function AboutPage() {
       <section className="split founder">
         <img className="split-photo founder-photo" src="/photos/evan-payne.png" alt="Evan Payne with his family" />
         <div className="split-text">
-          <h2>Meet Our Founder</h2>
+          <h2>Our Leadership</h2>
           <p className="founder-role">
             <strong>Evan Payne</strong>
             <br />
             President, Enactus Saint Mary’s
           </p>
           <p>
-            Evan is a business student at Saint Mary’s University’s Sobey School of Business and President of Enactus
-            Saint Mary’s, the student team Square Roots grew out of.
+            As President of Enactus Saint Mary’s, the student team behind Square Roots, Evan plays a leading role in
+            guiding the project and the people who make it happen. He studies business at Saint Mary’s University’s
+            Sobey School of Business.
           </p>
           <p>
-            He has also worked as a student assistant at the university’s Arthur L. Irving Entrepreneurship Centre, and
-            his experience includes growth initiatives, team training and project coordination, with community and
-            economic development programs across Nova Scotia.
+            Evan has worked as a student assistant at the university’s Arthur L. Irving Entrepreneurship Centre. His
+            experience includes growth initiatives, team training and project coordination, with community and economic
+            development programs across Nova Scotia.
           </p>
           <p>
-            At Square Roots, Evan puts that experience to work on a simple idea: good food shouldn’t go to waste while
-            people go without. Farms are paid for produce stores won’t take, Community Managers build something of
-            their own, and more Nova Scotians have fresh food on the table.
+            He brings that experience to Square Roots’ mission: making sure good food doesn’t go to waste while people
+            go without, supporting local farms, and helping Community Managers build something of their own.
           </p>
         </div>
       </section>
