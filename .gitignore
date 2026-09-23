@@ -17,3 +17,6 @@ frontend/dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Photos of real people (not the public website photos). Kept on this computer only.
+frontend/public/photos/evan-payne.png

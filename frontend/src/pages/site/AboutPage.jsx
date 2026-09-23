@@ -53,11 +53,7 @@ export default function AboutPage() {
       </section>
 
       <section className="split founder">
-        {/* Swap this placeholder for a headshot once Evan has sent one:
-            <img className="split-photo" src="/photos/evan-payne.jpg" alt="Evan Payne" /> */}
-        <div className="founder-placeholder" aria-hidden="true">
-          <span>EP</span>
-        </div>
+        <img className="split-photo founder-photo" src="/photos/evan-payne.png" alt="Evan Payne with his family" />
         <div className="split-text">
           <h2>Meet Our Founder</h2>
           <p className="founder-role">
