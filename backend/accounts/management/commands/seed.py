@@ -364,6 +364,7 @@ class Command(BaseCommand):
         if number > 1 or bundles_total == 0:
             return 0
         made = 0
+        bought_so_far = 0
         for farm_name, _location, pickup_notes, _username, share, produce in FARMS:
             if number >= -2:
                 if (farm_name, number) not in RECENT_FARM_ORDERS:
@@ -386,11 +387,13 @@ class Command(BaseCommand):
                 sent_at=None if number >= 1 else cycle.order_cutoff,
             )
             # This farm's share of the pounds, split across two of its crops (rotating each cycle).
-            pounds = bundles_total * 10 * share
+            # The last farm takes whatever is left, so the purchases add up to exactly what's needed.
+            needed = bundles_total * 10
+            pounds = needed - bought_so_far if farm_name == FARMS[-1][0] and number < -2 else round_to(needed * share)
+            bought_so_far += pounds
             first, second = produce[number % len(produce)], produce[(number + 1) % len(produce)]
-            for (name, price), part in ((first, 0.6), (second, 0.4)):
-                FarmOrderLine.objects.create(
-                    order=order, produce=name, pounds=round_to(pounds * part), price_per_pound=Decimal(price)
-                )
+            first_pounds = round_to(pounds * 0.6)
+            for (name, price), line_pounds in ((first, first_pounds), (second, pounds - first_pounds)):
+                FarmOrderLine.objects.create(order=order, produce=name, pounds=line_pounds, price_per_pound=Decimal(price))
             made += 1
         return made
