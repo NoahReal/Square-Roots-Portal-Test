@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api'
-import { longDate } from '../../format'
+import { longDate, timeRange } from '../../format'
 import { FacebookIcon, InstagramIcon } from '../../components/Icons'
 
 // Drop dates come from the drop cycles in the portal, grouped by month like the
@@ -65,6 +65,14 @@ export default function LocationsPage() {
               <li key={site.id}>
                 <h3>{site.name}</h3>
                 <p>{site.address}</p>
+                {site.next_drop ? (
+                  <p className="location-next">
+                    <strong>Next drop:</strong> {longDate(site.next_drop.drop_date)},{' '}
+                    {timeRange(site.next_drop.starts_at, site.next_drop.ends_at)}
+                  </p>
+                ) : (
+                  <p className="location-next muted">Next drop date coming soon</p>
+                )}
                 <div className="location-links">
                   {site.instagram_url && (
                     <a href={site.instagram_url} target="_blank" rel="noreferrer" aria-label={`${site.name} on Instagram`}>

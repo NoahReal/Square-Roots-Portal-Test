@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import { FacebookIcon, InstagramIcon } from './Icons'
 
 // The footer from squarerootssmu.ca (Enactus, contact, social), with Partner Portal links added.
-export default function SiteFooter() {
+// `inPortal` adds "Partner Portal" to the copyright line inside the portal.
+export default function SiteFooter({ inPortal = false }) {
   return (
     <>
       <footer className="public-footer">
@@ -49,7 +50,7 @@ export default function SiteFooter() {
         </div>
       </footer>
       <div className="copyright">
-        © {new Date().getFullYear()} Square Roots C.I.C. · Partner portal prototype
+        © {new Date().getFullYear()} Square Roots C.I.C.{inPortal && ' · Partner Portal'}
       </div>
     </>
   )

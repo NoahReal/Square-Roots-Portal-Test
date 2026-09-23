@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../../api'
-import { dateAndTime, longDate, money, pounds, shortDate } from '../../../format'
+import { dateAndTime, fromLocalInput, longDate, money, pounds, shortDate, toLocalInput } from '../../../format'
 import PageHero from '../../../components/PageHero'
 import CyclePicker, { useChosenCycle } from '../../../components/CyclePicker'
+import Stepper from '../../../components/Stepper'
 
 const STATUS_TAGS = {
   waiting: { text: 'Waiting for farm', className: 'tag-waiting' },
@@ -27,13 +28,17 @@ export default function OrdersPage() {
     load(chosen.id)
   }, [chosen?.id])
 
+  // Runs a change, then reloads the cycle. Errors are shown at the top of the page.
   async function run(request) {
     setError('')
     try {
       await request()
       await load(chosen.id)
+      return true
     } catch (err) {
-      setError(err.data?.detail || err.message)
+      const data = err.data || {}
+      setError([].concat(data.detail ?? data.bundles ?? data.pickup_at ?? err.message).join(' '))
+      return false
     }
   }
 
@@ -97,27 +102,14 @@ export default function OrdersPage() {
                         <th scope="col" className="num">Bundles</th>
                         <th scope="col" className="num">Pounds</th>
                         <th scope="col" className="num">Preordered</th>
+                        <th scope="col" className="no-print">
+                          <span className="visually-hidden">Change</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {detail.site_drops.map((drop) => (
-                        <tr key={drop.id}>
-                          <td>
-                            {drop.site_name}
-                            {drop.drop_date !== detail.drop_date && (
-                              <span className="muted"> ({shortDate(drop.drop_date)})</span>
-                            )}
-                          </td>
-                          <td className="num">
-                            {drop.bundles ?? (
-                              <span className={drop.ordering_open ? 'muted' : 'text-warning'}>
-                                {drop.ordering_open ? 'not yet' : 'no order'}
-                              </span>
-                            )}
-                          </td>
-                          <td className="num">{drop.bundles !== null ? pounds(drop.bundles * 10) : ''}</td>
-                          <td className="num">{drop.preorder_bundles || ''}</td>
-                        </tr>
+                        <SiteOrderRow key={drop.id} drop={drop} cycleDate={detail.drop_date} onRun={run} />
                       ))}
                     </tbody>
                     <tfoot>
@@ -126,6 +118,7 @@ export default function OrdersPage() {
                         <td className="num">{detail.bundles_ordered}</td>
                         <td className="num">{pounds(detail.pounds_needed)}</td>
                         <td />
+                        <td className="no-print" />
                       </tr>
                     </tfoot>
                   </table>
@@ -173,7 +166,11 @@ function FarmOrderCard({ order, onRun }) {
       <header className="order-head">
         <div>
           <h3>{order.farm_name}</h3>
-          <p className="muted">Pickup {dateAndTime(order.pickup_at)}</p>
+          <p className="muted">
+            Pickup {dateAndTime(order.pickup_at)}
+            {order.pickup_notes && ` · ${order.pickup_notes}`}
+          </p>
+          {beforePickup && <PickupEditor order={order} onRun={onRun} />}
         </div>
         <span className={'tag ' + tag.className}>{tag.text}</span>
       </header>
@@ -247,5 +244,101 @@ function FarmOrderCard({ order, onRun }) {
           </div>
         ))}
     </article>
+  )
+}
+
+// One row of the site orders table. Admins can change any site's order, even after the cutoff.
+function SiteOrderRow({ drop, cycleDate, onRun }) {
+  const [editing, setEditing] = useState(false)
+  const [bundles, setBundles] = useState(drop.bundles ?? 0)
+
+  async function save() {
+    const ok = await onRun(() => api(`/admin/site-drops/${drop.id}/order/`, { method: 'PUT', body: { bundles } }))
+    if (ok) setEditing(false)
+  }
+
+  return (
+    <tr className={editing ? 'editing-row' : ''}>
+      <td>
+        {drop.site_name}
+        {drop.drop_date !== cycleDate && <span className="muted"> ({shortDate(drop.drop_date)})</span>}
+      </td>
+      {editing ? (
+        <td colSpan={3}>
+          <Stepper id={`site-order-${drop.id}`} value={bundles} onChange={setBundles} size="small" label={`bundles for ${drop.site_name}`} />
+          <p className="field-hint">Their Community Manager will be emailed about the change.</p>
+        </td>
+      ) : (
+        <>
+          <td className="num">
+            {drop.bundles ?? (
+              <span className={drop.ordering_open ? 'muted' : 'text-warning'}>{drop.ordering_open ? 'not yet' : 'no order'}</span>
+            )}
+          </td>
+          <td className="num">{drop.bundles !== null ? pounds(drop.bundles * 10) : ''}</td>
+          <td className="num">{drop.preorder_bundles || ''}</td>
+        </>
+      )}
+      <td className="row-actions no-print">
+        {editing ? (
+          <>
+            <button className="btn btn-small btn-primary" onClick={save}>
+              Save
+            </button>
+            <button className="link-button" onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          !drop.has_happened && (
+            <button className="link-button" onClick={() => setEditing(true)}>
+              Change
+            </button>
+          )
+        )}
+      </td>
+    </tr>
+  )
+}
+
+// "Change pickup": when and how the produce is collected from the farm. The farm is emailed.
+function PickupEditor({ order, onRun }) {
+  const [open, setOpen] = useState(false)
+  const [when, setWhen] = useState(toLocalInput(order.pickup_at))
+  const [notes, setNotes] = useState(order.pickup_notes)
+
+  async function save() {
+    const ok = await onRun(() =>
+      api(`/admin/farm-orders/${order.id}/`, { method: 'PATCH', body: { pickup_at: fromLocalInput(when), pickup_notes: notes } }),
+    )
+    if (ok) setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <button className="link-button no-print" onClick={() => setOpen(true)}>
+        Change pickup
+      </button>
+    )
+  }
+  return (
+    <div className="pickup-editor no-print">
+      <div className="field">
+        <label htmlFor={`pickup-${order.id}`}>Pickup day and time</label>
+        <input id={`pickup-${order.id}`} type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+      </div>
+      <div className="field">
+        <label htmlFor={`pickup-notes-${order.id}`}>Pickup instructions</label>
+        <input id={`pickup-notes-${order.id}`} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Side door of the barn" />
+      </div>
+      <div className="button-row">
+        <button className="btn btn-small btn-primary" onClick={save}>
+          Save and tell the farm
+        </button>
+        <button className="link-button" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </div>
+    </div>
   )
 }

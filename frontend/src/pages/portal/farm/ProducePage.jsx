@@ -129,9 +129,15 @@ function ProduceItem({ listing, onSave, onSoldOut }) {
   }
 
   return (
-    <li className="produce-item">
+    <li className={'produce-item' + (listing.expired ? ' produce-item-expired' : '')}>
       <div className="produce-item-main">
         <h3>{listing.produce}</h3>
+        {listing.expired && (
+          <p className="text-warning">
+            Past its “available until” date, so Square Roots can't order it. Edit the date if you still have it, or mark it
+            sold out.
+          </p>
+        )}
         <p className="produce-amount">
           <strong>{pounds(listing.pounds)}</strong> · {money(listing.price_per_pound)}/lb
         </p>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../../api'
-import { addDays, dateAndTime, fromLocalInput, longDate, shortDate, todayIso, toLocalInput } from '../../../format'
+import { addDays, dateAndTime, fromLocalInput, longDate, shortDate, timeRange, todayIso, toLocalInput } from '../../../format'
 import PageHero from '../../../components/PageHero'
 
 // Admin screen: plan drop cycles, choose which locations take part, and adjust dates for any site.
@@ -150,7 +150,7 @@ function CycleDetail({ cycleId, onChanged }) {
       setEditingId(null)
       onChanged()
     } catch (err) {
-      setError(err.data?.order_cutoff || err.data?.detail || err.message)
+      setError(err.data?.order_cutoff || err.data?.ends_at || err.data?.detail || err.message)
     }
   }
 
@@ -163,7 +163,7 @@ function CycleDetail({ cycleId, onChanged }) {
         <thead>
           <tr>
             <th scope="col">Location</th>
-            <th scope="col">Drop date</th>
+            <th scope="col">Drop</th>
             <th scope="col">Order by</th>
             <th scope="col" className="num">Bundles</th>
             <th scope="col">
@@ -183,12 +183,16 @@ function CycleDetail({ cycleId, onChanged }) {
             ) : (
               <tr key={drop.id}>
                 <td>{drop.site_name}</td>
-                <td>{shortDate(drop.drop_date)}</td>
+                <td>
+                  {shortDate(drop.drop_date)}
+                  <br />
+                  <span className="muted">{timeRange(drop.starts_at, drop.ends_at)}</span>
+                </td>
                 <td>{dateAndTime(drop.order_cutoff)}</td>
                 <td className="num">{drop.bundles ?? <span className="muted">not yet</span>}</td>
                 <td className="row-actions">
                   <button className="link-button" onClick={() => setEditingId(drop.id)}>
-                    Change dates
+                    Change
                   </button>
                   {drop.bundles === null && (
                     <button
@@ -233,19 +237,26 @@ function CycleDetail({ cycleId, onChanged }) {
 
 function SiteDropEditor({ drop, onSave, onCancel }) {
   const [dropDate, setDropDate] = useState(drop.drop_date)
+  const [startsAt, setStartsAt] = useState(drop.starts_at.slice(0, 5))
+  const [endsAt, setEndsAt] = useState(drop.ends_at.slice(0, 5))
   const [cutoff, setCutoff] = useState(toLocalInput(drop.order_cutoff))
   return (
     <tr className="editing-row">
       <td>{drop.site_name}</td>
       <td>
         <input type="date" value={dropDate} min={todayIso()} onChange={(e) => setDropDate(e.target.value)} aria-label="Drop date" />
+        <span className="time-pair">
+          <input type="time" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} aria-label="Starts at" />
+          to
+          <input type="time" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} aria-label="Ends at" />
+        </span>
       </td>
       <td>
         <input type="datetime-local" value={cutoff} onChange={(e) => setCutoff(e.target.value)} aria-label="Order by" />
       </td>
       <td />
       <td className="row-actions">
-        <button className="btn btn-small btn-primary" onClick={() => onSave({ drop_date: dropDate, order_cutoff: fromLocalInput(cutoff) })}>
+        <button className="btn btn-small btn-primary" onClick={() => onSave({ drop_date: dropDate, starts_at: startsAt, ends_at: endsAt, order_cutoff: fromLocalInput(cutoff) })}>
           Save
         </button>
         <button className="link-button" onClick={onCancel}>
@@ -280,6 +291,8 @@ function NewCycleForm({ sites, lastDate, onCreated }) {
   const suggestedDate = lastDate && lastDate >= todayIso() ? addDays(lastDate, 14) : addDays(todayIso(), 14)
   const [dropDate, setDropDate] = useState(suggestedDate)
   const [cutoff, setCutoff] = useState(`${addDays(suggestedDate, -4)}T17:00`)
+  const [startsAt, setStartsAt] = useState('11:00')
+  const [endsAt, setEndsAt] = useState('13:00')
   const [chosen, setChosen] = useState(() => new Set(sites.map((s) => s.id)))
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
@@ -302,7 +315,7 @@ function NewCycleForm({ sites, lastDate, onCreated }) {
     try {
       const cycle = await api('/admin/cycles/', {
         method: 'POST',
-        body: { drop_date: dropDate, order_cutoff: fromLocalInput(cutoff), sites: [...chosen] },
+        body: { drop_date: dropDate, order_cutoff: fromLocalInput(cutoff), starts_at: startsAt, ends_at: endsAt, sites: [...chosen] },
       })
       onCreated(cycle)
     } catch (err) {
@@ -321,6 +334,18 @@ function NewCycleForm({ sites, lastDate, onCreated }) {
         <input id="new-drop-date" type="date" min={todayIso()} value={dropDate} onChange={(e) => changeDate(e.target.value)} />
         {errorFor('drop_date')}
       </div>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="new-starts">Drop starts</label>
+          <input id="new-starts" type="time" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor="new-ends">Drop ends</label>
+          <input id="new-ends" type="time" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
+          {errorFor('ends_at')}
+        </div>
+      </div>
+      <p className="field-hint hours-hint">You can change the hours for any one location afterwards.</p>
       <div className="field">
         <label htmlFor="new-cutoff">Ordering closes</label>
         <input id="new-cutoff" type="datetime-local" value={cutoff} onChange={(e) => setCutoff(e.target.value)} />

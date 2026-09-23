@@ -14,12 +14,15 @@ import EventsPage from './pages/site/EventsPage'
 import ContactPage from './pages/site/ContactPage'
 import SignupChooserPage from './pages/site/SignupChooserPage'
 import SignupPage from './pages/site/SignupPage'
+import NotFoundPage from './pages/site/NotFoundPage'
 
 // Partner portal (everything under /portal)
 import Layout from './components/Layout'
 import LoginPage from './pages/portal/LoginPage'
 import PendingPage from './pages/portal/PendingPage'
-import PortalHomePage from './pages/portal/PortalHomePage'
+import ForgotPasswordPage from './pages/portal/ForgotPasswordPage'
+import ResetPasswordPage from './pages/portal/ResetPasswordPage'
+import AccountPage from './pages/portal/AccountPage'
 import ApiPage from './pages/portal/ApiPage'
 import SignupsPage from './pages/portal/SignupsPage'
 import ProducePage from './pages/portal/farm/ProducePage'
@@ -32,6 +35,12 @@ import OrderPage from './pages/portal/manager/OrderPage'
 import PreordersPage from './pages/portal/manager/PreordersPage'
 import AfterDropPage from './pages/portal/manager/AfterDropPage'
 import HostDropsPage from './pages/portal/host/HostDropsPage'
+import PeoplePage from './pages/portal/admin/PeoplePage'
+import AdminHomePage from './pages/portal/admin/AdminHomePage'
+import ManagerHomePage from './pages/portal/manager/ManagerHomePage'
+import FarmHomePage from './pages/portal/farm/FarmHomePage'
+import AdminLocationsPage from './pages/portal/admin/LocationsPage'
+import AdminEventsPage from './pages/portal/admin/EventsPage'
 
 // Only lets an approved, logged-in user with the right role through.
 function RequireRole({ role }) {
@@ -43,12 +52,18 @@ function RequireRole({ role }) {
 
 // Which page component shows for each portal menu item (the menus are in roles.js).
 const PAGES = {
+  '/portal/admin': AdminHomePage,
+  '/portal/manager': ManagerHomePage,
+  '/portal/farm': FarmHomePage,
   '/portal/admin/signups': SignupsPage,
   '/portal/admin/cycles': DropCyclesPage,
   '/portal/admin/orders': OrdersPage,
   '/portal/admin/farms': FarmsPage,
   '/portal/admin/impact': ImpactPage,
   '/portal/admin/api': ApiPage,
+  '/portal/admin/people': PeoplePage,
+  '/portal/admin/locations': AdminLocationsPage,
+  '/portal/admin/events': AdminEventsPage,
   '/portal/manager/order': OrderPage,
   '/portal/manager/preorders': PreordersPage,
   '/portal/manager/after-drop': AfterDropPage,
@@ -58,15 +73,53 @@ const PAGES = {
 }
 
 function pageFor(item) {
-  const Page = PAGES[item.to] ?? PortalHomePage
+  const Page = PAGES[item.to]
   return <Page />
 }
 
-// Start each new page at the top, like a normal website.
-function ScrollToTop() {
+// Only lets an approved, logged-in user through (any role). Used for My Account.
+function RequireApproved() {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/portal/login" replace />
+  if (user.status !== 'approved') return <Navigate to={homeFor(user)} replace />
+  return <Outlet />
+}
+
+// Browser tab titles for the public pages, like the live site ("About | Square Roots").
+const PUBLIC_TITLES = {
+  '/': 'Home',
+  '/about': 'About',
+  '/drop-dates-locations': 'Drop Dates & Locations',
+  '/for-farms': 'For Farms',
+  '/become-a-community-manager': 'Become a Community Manager',
+  '/events': 'Events',
+  '/contact-us': 'Contact Us',
+  '/signup': 'Partner Sign-up',
+  '/portal/login': 'Log in',
+  '/portal/pending': 'Application received',
+  '/portal/forgot-password': 'Forgot password',
+  '/portal/reset-password': 'Choose a new password',
+  '/portal/account': 'My account',
+}
+
+function titleFor(pathname) {
+  if (pathname.startsWith('/signup/')) return 'Partner Sign-up | Square Roots'
+  if (PUBLIC_TITLES[pathname]) {
+    return `${PUBLIC_TITLES[pathname]} | Square Roots${pathname.startsWith('/portal') ? ' Partner Portal' : ''}`
+  }
+  for (const role of Object.values(ROLES)) {
+    const item = role.nav.find((i) => i.to === pathname)
+    if (item) return `${item.label === 'Home' ? role.label : item.label} | Square Roots Partner Portal`
+  }
+  return 'Page not found | Square Roots'
+}
+
+// Start each new page at the top, like a normal website, and set the browser tab title.
+function PageChange() {
   const { pathname } = useLocation()
   useEffect(() => {
     window.scrollTo(0, 0)
+    document.title = titleFor(pathname)
   }, [pathname])
   return null
 }
@@ -77,7 +130,7 @@ export default function App() {
 
   return (
     <>
-      <ScrollToTop />
+      <PageChange />
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
@@ -92,6 +145,9 @@ export default function App() {
 
           <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
           <Route path="/portal/pending" element={<PendingPage />} />
+          <Route path="/portal/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/portal/reset-password" element={<ResetPasswordPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
 
         <Route path="/portal" element={<Navigate to={user ? homeFor(user) : '/portal/login'} replace />} />
@@ -106,7 +162,11 @@ export default function App() {
           </Route>
         ))}
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route element={<RequireApproved />}>
+          <Route element={<Layout />}>
+            <Route path="/portal/account" element={<AccountPage />} />
+          </Route>
+        </Route>
       </Routes>
     </>
   )

@@ -1,0 +1,391 @@
+/*
+  Home page dashboards, the demo banner, the admin "More" menu, and the People,
+  Locations, Events and account screens.
+*/
+
+/* ---------- Demo banner ---------- */
+
+.demo-banner {
+  padding: 6px var(--gutter);
+  background: var(--sr-soil);
+  color: var(--sr-cream);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.demo-note {
+  padding: 10px 14px;
+  background: var(--sr-cream);
+  border-left: 4px solid var(--sr-yellow);
+}
+
+/* ---------- Admin "More" menu (desktop) ---------- */
+
+.top-nav-more {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-left: 1px solid var(--sr-ink);
+}
+
+.top-nav-more-label {
+  min-height: 56px;
+  padding: 0 14px;
+  background: none;
+  border: 0;
+  border-bottom: 4px solid transparent;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.top-nav-more-label::after {
+  content: '▾';
+  margin-left: 6px;
+  font-size: 0.8em;
+}
+
+.top-nav-more.active .top-nav-more-label {
+  border-bottom-color: var(--sr-yellow);
+  font-weight: 700;
+}
+
+.top-nav-more-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 30;
+  min-width: 200px;
+  padding: 8px 0;
+  background: var(--sr-cream);
+  border-top: 4px solid var(--sr-yellow);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.top-nav-more:hover .top-nav-more-menu,
+.top-nav-more:focus-within .top-nav-more-menu {
+  display: block;
+}
+
+.top-nav .top-nav-more-menu a {
+  display: flex;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  justify-content: flex-start;
+}
+
+.top-nav .top-nav-more-menu a:hover {
+  background: var(--sr-white);
+}
+
+.top-nav .top-nav-more-menu a.active {
+  font-weight: 700;
+  border: 0;
+  box-shadow: inset 4px 0 0 var(--sr-yellow);
+}
+
+@media (min-width: 1200px) {
+  .top-nav-more-label {
+    padding: 0 28px;
+  }
+}
+
+/* ---------- Dashboards ---------- */
+
+.dashboard-layout {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.todo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 14px 16px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-yellow);
+}
+
+.todo-ok {
+  border-left-color: var(--sr-green-dark);
+}
+
+.todo-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 8px;
+  background: var(--sr-yellow);
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.todo-text {
+  flex: 1 1 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.todo-done {
+  margin: 0;
+}
+
+.cycle-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.cycle-card p {
+  margin: 0 0 4px;
+}
+
+.muted-dark {
+  color: #3a2a00;
+}
+
+.cycle-card-numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.cycle-card-numbers dt {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.cycle-card-numbers dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.cycle-card-progress-label {
+  font-size: 0.9rem;
+}
+
+.progress-on-yellow {
+  margin-bottom: 16px;
+  border-color: var(--sr-ink);
+}
+
+.dashboard-layout aside > * + * {
+  margin-top: 16px;
+}
+
+.screen-cards {
+  margin-top: 8px;
+}
+
+.screen-card {
+  display: block;
+  text-decoration: none;
+  border-top: 4px solid var(--sr-green-light);
+}
+
+.screen-card:hover {
+  border-top-color: var(--sr-yellow);
+}
+
+.screen-card p {
+  margin: 0;
+  color: var(--sr-ink-soft);
+}
+
+.screen-card-quiet {
+  border-top-color: var(--sr-line);
+}
+
+/* ---------- People ---------- */
+
+.people-list,
+.location-admin-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.person {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-green-light);
+}
+
+.person-off {
+  opacity: 0.7;
+  border-left-color: var(--sr-line);
+}
+
+.person-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.person-main .tag {
+  margin-left: 6px;
+}
+
+.person-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.person-actions select {
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid var(--sr-ink);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+.location-admin-list .block {
+  margin-bottom: 0;
+}
+
+/* ---------- Sign-ups, cycles, orders ---------- */
+
+.review-box {
+  padding: 16px;
+  background: var(--sr-cream);
+  border-left: 4px solid var(--sr-yellow);
+}
+
+.review-box .button-row {
+  margin-top: 0;
+}
+
+.time-pair {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.hours-hint {
+  margin: -12px 0 16px;
+}
+
+.pickup-editor {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--sr-cream);
+}
+
+.pickup-editor .field {
+  margin-bottom: 12px;
+}
+
+.produce-item-expired {
+  border-left-color: var(--sr-maroon);
+}
+
+/* ---------- Account, password, not found ---------- */
+
+.account-layout {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+.narrow-form {
+  max-width: 480px;
+}
+
+.not-found-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* ---------- Public: locations and events ---------- */
+
+.location-next {
+  color: var(--sr-ink);
+}
+
+.event {
+  margin-bottom: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--sr-line);
+}
+
+.event:last-child {
+  border-bottom: 0;
+}
+
+.event-when {
+  margin-bottom: 4px;
+  font-weight: 700;
+  color: var(--sr-green-dark);
+}
+
+.event-where {
+  margin-bottom: 8px;
+  color: var(--sr-ink-soft);
+}
+
+.event-past {
+  opacity: 0.8;
+}
+
+.event-social {
+  justify-content: center;
+}
+
+.past-events-heading {
+  margin: 16px 0 24px;
+  text-align: center;
+  font-size: 1.4rem;
+}
+
+/* ---------- Wider screens ---------- */
+
+@media (min-width: 700px) {
+  .person {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .person-actions {
+    justify-content: flex-end;
+    max-width: 420px;
+  }
+
+  .account-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1000px) {
+  .dashboard-layout {
+    grid-template-columns: 7fr 5fr;
+  }
+}

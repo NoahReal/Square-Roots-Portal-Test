@@ -1,6 +1,9 @@
 // Small helper for talking to the Django API.
 // Every request sends the login cookie and Django's CSRF token automatically.
 
+// Sent when the server says nobody is logged in (for example, the session timed out).
+export const SESSION_EXPIRED_EVENT = 'sr-session-expired'
+
 export class ApiError extends Error {
   constructor(message, status, data) {
     super(message)
@@ -26,6 +29,9 @@ export async function api(path, { method = 'GET', body } = {}) {
   })
 
   const data = await response.json().catch(() => null)
+  if (response.status === 401) {
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+  }
   if (!response.ok) {
     const message = (data && data.detail) || 'Something went wrong. Please try again.'
     throw new ApiError(message, response.status, data)

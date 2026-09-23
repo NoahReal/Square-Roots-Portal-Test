@@ -8,6 +8,7 @@ import './styles.css'
 import './public.css'
 import './farm.css'
 import './screens.css'
+import './dashboard.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

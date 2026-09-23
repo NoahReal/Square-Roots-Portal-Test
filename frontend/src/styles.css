@@ -103,9 +103,19 @@
 }
 
 .user-menu-name {
-  display: none;
+  display: block;
   text-align: right;
   line-height: 1.2;
+  text-decoration: none;
+}
+
+/* On phones only "My account" shows; the full name appears on wide screens. */
+.user-menu-full {
+  display: none;
+}
+
+.user-menu-name:hover small {
+  text-decoration: underline;
 }
 
 .user-menu-name small {
@@ -544,7 +554,7 @@
     padding: 0 28px;
   }
 
-  .user-menu-name {
+  .user-menu-full {
     display: block;
   }
 }

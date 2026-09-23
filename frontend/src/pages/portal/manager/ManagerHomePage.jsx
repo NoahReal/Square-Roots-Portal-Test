@@ -1,0 +1,105 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { api } from '../../../api'
+import { useAuth } from '../../../auth'
+import { dateAndTime, longDate, pounds, shortDate, timeLeft, timeRange } from '../../../format'
+import PageHero from '../../../components/PageHero'
+import { ScreenCards, TodoList } from '../../../components/Dashboard'
+
+// Community Manager home: your next drop, and anything waiting for you.
+export default function ManagerHomePage() {
+  const { user } = useAuth()
+  const [drops, setDrops] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api('/manager/drops/')
+      .then(setDrops)
+      .catch((err) => setError(err.message))
+  }, [])
+
+  const next = drops?.find((d) => !d.has_happened)
+  const openNotOrdered = drops?.filter((d) => d.ordering_open && d.bundles === null) ?? []
+  const toLog = drops?.filter((d) => d.has_happened && d.bundles !== null && !d.report) ?? []
+
+  const items = []
+  if (openNotOrdered[0]) {
+    const drop = openNotOrdered[0]
+    items.push({
+      title: `Order for the ${drop.cycle_name}`,
+      detail: `Order by ${dateAndTime(drop.order_cutoff)} (${timeLeft(drop.order_cutoff)})`,
+      to: '/portal/manager/order',
+      action: 'Order now',
+    })
+  }
+  if (toLog.length) {
+    items.push({
+      count: toLog.length,
+      title: toLog.length === 1 ? 'Drop to log' : 'Drops to log',
+      detail: `How did it go? ${toLog.map((d) => d.cycle_name).join(', ')}`,
+      to: '/portal/manager/after-drop',
+      action: 'Log it',
+    })
+  }
+
+  return (
+    <>
+      <PageHero title={`Welcome, ${user.first_name}`} lead={user.site_name ? `Your Square Roots location: ${user.site_name}` : ''} />
+      <section className="section">
+        <div className="container">
+          {error && <div className="notice notice-error">{error}</div>}
+          {!drops && !error && <p className="muted">Loading…</p>}
+          {drops && (
+            <div className="dashboard-layout">
+              <section>
+                <h2>To do</h2>
+                <TodoList items={items} doneText="You're all set. Your next order is in and every drop is logged." />
+              </section>
+              <aside>
+                {next ? (
+                  <article className="block block-yellow cycle-card">
+                    <span className="eyebrow-label">Next drop</span>
+                    <h3>{longDate(next.drop_date)}</h3>
+                    <p>{timeRange(next.starts_at, next.ends_at)}</p>
+                    <dl className="cycle-card-numbers">
+                      <div>
+                        <dt>Your order</dt>
+                        <dd>{next.bundles === null ? 'Not yet' : `${next.bundles} bundles`}</dd>
+                      </div>
+                      <div>
+                        <dt>Preorders</dt>
+                        <dd>
+                          {next.preorder_count} ({next.preorder_bundles} bundles)
+                        </dd>
+                      </div>
+                    </dl>
+                    <p className="muted-dark">
+                      {next.ordering_open
+                        ? `You can change your order until ${shortDate(next.order_cutoff.slice(0, 10))}.`
+                        : `Ordering closed. ${next.bundles ? `${pounds(next.bundles * 10)} of produce is on its way.` : ''}`}
+                    </p>
+                    <div className="button-row">
+                      <Link to="/portal/manager/preorders" className="btn btn-small">
+                        Preorders
+                      </Link>
+                      {next.ordering_open && (
+                        <Link to="/portal/manager/order" className="btn btn-small">
+                          Order
+                        </Link>
+                      )}
+                    </div>
+                  </article>
+                ) : (
+                  <div className="block block-white">
+                    <p className="muted">No drops scheduled yet. The Square Roots team will open the next one soon.</p>
+                  </div>
+                )}
+              </aside>
+            </div>
+          )}
+          <ScreenCards role="community_manager" />
+        </div>
+      </section>
+    </>
+  )
+}
