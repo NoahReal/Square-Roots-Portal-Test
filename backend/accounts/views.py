@@ -260,7 +260,8 @@ class _ReviewApplicationView(APIView):
                 raise ValidationError({"new_site": "Add the new location's address."})
             last = Site.objects.order_by("-sort_order").first()
             return Site.objects.create(
-                name=name, address=new_site["address"].strip(), sort_order=(last.sort_order + 1) if last else 0
+                name=name, address=new_site["address"].strip(), sort_order=(last.sort_order + 1) if last else 0,
+                first_drop_pricing=True,  # a brand-new location gets the first-drop incentive
             )
         if application.site:
             return application.site

@@ -75,7 +75,9 @@ class PreorderListView(generics.ListCreateAPIView):
         return Preorder.objects.filter(site_drop=my_site_drop(self.request, self.kwargs["pk"]))
 
     def perform_create(self, serializer):
-        serializer.save(site_drop=my_site_drop(self.request, self.kwargs["pk"]))
+        site_drop = my_site_drop(self.request, self.kwargs["pk"])
+        check_delivery_offered(site_drop, serializer.validated_data)
+        serializer.save(site_drop=site_drop)
 
 
 class PreorderDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -86,6 +88,15 @@ class PreorderDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Preorder.objects.filter(site_drop__site=site_for(self.request))
+
+    def perform_update(self, serializer):
+        check_delivery_offered(serializer.instance.site_drop, serializer.validated_data)
+        serializer.save()
+
+
+def check_delivery_offered(site_drop, data):
+    if data.get("delivery") and not site_drop.site.delivery_partner:
+        raise ValidationError({"delivery": f"{site_drop.site.name} doesn't offer home delivery."})
 
 
 class DropReportView(APIView):

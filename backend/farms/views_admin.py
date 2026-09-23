@@ -11,7 +11,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.notifications import notify_person
+from accounts.notifications import friendly_time, notify_person
 from accounts.permissions import IsAdminRole
 from drops.models import DropCycle
 from .models import FarmOrder, FarmOrderLine, ProduceListing
@@ -51,7 +51,10 @@ class AllProduceView(APIView):
 
 
 class BuyProduceView(APIView):
-    """Buys pounds from a farm's produce listing for a drop cycle, adding it to that farm's order (Admins)."""
+    """Buys pounds from a farm's produce listing for a drop cycle, adding it to that farm's order (Admins).
+
+    New orders are drafts: the farm doesn't see them until the team sends them after ordering closes.
+    """
 
     permission_classes = [IsAdminRole]
 
@@ -76,8 +79,8 @@ class BuyProduceView(APIView):
             drop_cycle=cycle,
             defaults={"pickup_at": default_pickup(cycle), "pickup_notes": listing.farm.pickup_notes},
         )
-        if not created and order.status != FarmOrder.Status.WAITING:
-            # The order changed, so the farm needs to look at it again.
+        if order.sent_at and order.status != FarmOrder.Status.WAITING:
+            # The farm already had this order, and it changed, so they need to look at it again.
             order.status = FarmOrder.Status.WAITING
             order.farm_note = ""
             order.responded_at = None
@@ -96,7 +99,8 @@ class BuyProduceView(APIView):
             listing.is_active = False
         listing.save()
 
-        tell_farm(order, f"New order for the {cycle.name}", "Square Roots has a new order for you. Please confirm it on your Pickups screen.")
+        if order.sent_at:
+            tell_farm(order, f"Your order for the {cycle.name} changed", "Square Roots added to your order. Please check and confirm it on your Pickups screen.")
         return Response({**FarmOrderSerializer(order).data, "farm_name": order.farm.name}, status=201)
 
 
@@ -154,7 +158,33 @@ class FarmOrderDetailView(APIView):
         if "pickup_notes" in request.data:
             order.pickup_notes = (request.data["pickup_notes"] or "").strip()[:300]
         order.save()
-        local = timezone.localtime(order.pickup_at)
-        when = f"{local:%A, %B} {local.day} at {local:%I:%M %p}".replace(" 0", " ")
-        tell_farm(order, f"Pickup changed for the {order.drop_cycle.name}", f"New pickup time: {when}.\n{order.pickup_notes}")
+        tell_farm(
+            order, f"Pickup changed for the {order.drop_cycle.name}", f"New pickup time: {friendly_time(order.pickup_at)}.\n{order.pickup_notes}"
+        )
         return Response({**FarmOrderSerializer(order).data, "farm_name": order.farm.name})
+
+
+class SendToFarmsView(APIView):
+    """Sends a drop cycle's draft orders to their farms in one batch, usually once ordering has closed (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, pk):
+        cycle = get_object_or_404(DropCycle, pk=pk)
+        drafts = FarmOrder.objects.filter(drop_cycle=cycle, sent_at__isnull=True).select_related("farm").prefetch_related("lines")
+        if not drafts:
+            raise ValidationError({"detail": "There are no unsent farm orders for this drop."})
+        now = timezone.now()
+        for order in drafts:
+            order.sent_at = now
+            order.save(update_fields=["sent_at"])
+            pounds = sum(line.pounds for line in order.lines.all())
+            items = "\n".join(f"  - {line.pounds} lbs {line.produce} at ${line.price_per_pound}/lb" for line in order.lines.all())
+            tell_farm(
+                order,
+                f"Square Roots order for the {cycle.name}",
+                f"Here's our order for the {cycle.name} ({pounds} lbs, ${order.total:.2f}):\n{items}\n\n"
+                f"Pickup: {friendly_time(order.pickup_at)}. {order.pickup_notes}\n\n"
+                "Please confirm it on your Pickups screen in the partner portal.",
+            )
+        return Response({"detail": f"Sent {len(drafts)} {'order' if len(drafts) == 1 else 'orders'} to farms.", "sent": len(drafts)})

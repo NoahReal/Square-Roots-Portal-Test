@@ -4,7 +4,7 @@ import csv
 from datetime import time, timedelta
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -146,6 +146,7 @@ class CycleDetailView(APIView):
                 ],
                 "pounds_needed": bundles * BUNDLE_POUNDS,
                 "pounds_bought": bought,
+                "unsent_farm_orders": sum(1 for order in farm_orders if order.sent_at is None),
                 "farm_orders": [{**FarmOrderSerializer(order).data, "farm_name": order.farm.name} for order in farm_orders],
             }
         )
@@ -249,8 +250,8 @@ class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Site
         fields = [
-            "id", "name", "address", "instagram_url", "facebook_url", "highlight", "is_active", "sort_order",
-            "people", "drops_this_year",
+            "id", "name", "address", "instagram_url", "facebook_url", "highlight", "delivery_partner",
+            "first_drop_pricing", "is_active", "sort_order", "people", "drops_this_year",
         ]
         extra_kwargs = {
             "name": {"error_messages": {"blank": "Give the location a name, like “Lower Sackville”."}},
@@ -283,7 +284,9 @@ class LocationListView(APIView):
         serializer = LocationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         last = Site.objects.order_by("-sort_order").first()
-        serializer.save(sort_order=(last.sort_order + 1) if last else 0)
+        # A location added here is new, so it gets the first-drop incentive unless the admin says otherwise.
+        first_drop_pricing = request.data.get("first_drop_pricing", True)
+        serializer.save(sort_order=(last.sort_order + 1) if last else 0, first_drop_pricing=first_drop_pricing)
         return Response(serializer.data, status=201)
 
 
@@ -301,6 +304,17 @@ class LocationDetailView(APIView):
 
 
 # ---------- Admin home dashboard ----------
+
+
+def remittances_outstanding():
+    """Logged drops whose Community Manager hasn't paid Square Roots yet (this year)."""
+    from .views_operations import statements_for
+
+    rows = [
+        r for r in statements_for(timezone.localdate().year)
+        if not r["remittance_received_on"] and float(r["owed_to_square_roots"]) > 0
+    ]
+    return {"count": len(rows), "total": f"{sum(float(r['owed_to_square_roots']) for r in rows):.2f}"}
 
 
 class DashboardView(APIView):
@@ -343,6 +357,11 @@ class DashboardView(APIView):
             {"id": o.id, "farm": o.farm.name, "cycle_id": o.drop_cycle_id, "cycle_name": o.drop_cycle.name, "pickup_at": o.pickup_at}
             for o in FarmOrder.objects.filter(status=FarmOrder.Status.WAITING, pickup_at__gt=now).select_related("farm", "drop_cycle")
         ]
+        to_send = (
+            FarmOrder.objects.filter(sent_at__isnull=True, drop_cycle__order_cutoff__lte=now, drop_cycle__drop_date__gte=today)
+            .values("drop_cycle_id", "drop_cycle__name")
+            .annotate(count=Count("id"))
+        )
         unpaid = FarmOrder.objects.filter(
             status=FarmOrder.Status.CONFIRMED, payment=FarmOrder.Payment.NOT_PAID, pickup_at__lte=now
         ).select_related("farm", "drop_cycle").prefetch_related("lines")
@@ -353,6 +372,11 @@ class DashboardView(APIView):
                 "next_cycle": buying(next_cycle),
                 "open_cycle": buying(open_cycle) if open_cycle and open_cycle != next_cycle else None,
                 "sites_not_ordered": not_ordered,
+                "orders_to_send": [
+                    {"cycle_id": row["drop_cycle_id"], "cycle_name": row["drop_cycle__name"], "count": row["count"]}
+                    for row in to_send
+                ],
+                "remittances_outstanding": remittances_outstanding(),
                 "reports_missing": reports_missing,
                 "farms_waiting": waiting_farms,
                 "unpaid_farm_orders": [
@@ -409,6 +433,11 @@ def impact_numbers(year):
         "totals": {
             "pounds_diverted": bought.aggregate(total=Sum("pounds"))["total"] or 0,
             "bundles_sold": sum(r.bundles_sold for r in reports),
+            "bundles_standard": sum(r.bundles_standard for r in reports),
+            "bundles_at_cost": sum(r.bundles_at_cost for r in reports),
+            "bundles_free": sum(r.bundles_free for r in reports),
+            "donations": f"{sum(r.donations for r in reports):.2f}",
+            "paid_to_farms": f"{sum(line.pounds * line.price_per_pound for line in bought):.2f}",
             "pounds_to_community": sum(r.bundles_sold for r in reports) * BUNDLE_POUNDS,
             "sites_active": len(sites),
             "drops_held": len(site_drops),
@@ -449,7 +478,7 @@ class ImpactCsvView(APIView):
         writer = csv.writer(response)
         writer.writerow([
             "Drop date", "Drop cycle", "Location", "Bundles ordered", "Bundles sold",
-            "Bundles left over", "Leftovers went to", "Pounds sold",
+            "Standard", "At cost", "Free", "Bundles left over", "Leftovers went to", "Pounds sold", "Donations",
         ])
         site_drops = (
             SiteDrop.objects.filter(drop_date__year=year, drop_date__lte=timezone.localdate())
@@ -465,9 +494,13 @@ class ImpactCsvView(APIView):
                 drop.site.name,
                 order.bundles if order else "",
                 report.bundles_sold if report else "",
+                report.bundles_standard if report else "",
+                report.bundles_at_cost if report else "",
+                report.bundles_free if report else "",
                 report.bundles_left_over if report else "",
                 report.get_leftovers_went_to_display() if report and report.bundles_left_over else "",
                 report.bundles_sold * BUNDLE_POUNDS if report else "",
+                f"{report.donations:.2f}" if report else "",
             ])
         return response
 

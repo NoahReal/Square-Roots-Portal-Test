@@ -31,6 +31,8 @@ class FarmTestCase(TestCase):
         )
 
     def make_order(self, farm=None, **fields):
+        """An order the team has already sent to the farm (pass sent_at=None for a draft)."""
+        fields.setdefault("sent_at", timezone.now())
         order = FarmOrder.objects.create(
             farm=farm or self.farm, drop_cycle=self.cycle,
             pickup_at=timezone.make_aware(datetime(2026, 10, 9, 9)), **fields,
@@ -101,6 +103,11 @@ class PickupTests(FarmTestCase):
         self.assertEqual(orders[0]["total"], "185.00")  # 400 x 0.35 + 100 x 0.45
         self.assertEqual(orders[0]["lines"][0]["total"], "140.00")
         self.assertEqual(orders[0]["drop_cycle_name"], "October 10 drop")
+
+    def test_farms_dont_see_draft_orders(self):
+        draft = self.make_order(sent_at=None)
+        self.assertEqual(self.client.get(ORDERS).data, [])
+        self.assertEqual(self.client.post(f"{ORDERS}{draft.id}/confirm/").status_code, 404)
 
     def test_confirm_order_and_tell_the_team(self):
         order = self.make_order()

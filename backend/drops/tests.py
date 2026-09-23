@@ -94,21 +94,25 @@ class PreorderTests(DropTestCase):
 class DropReportTests(DropTestCase):
     def test_log_a_drop_after_it_happens(self):
         drop = make_drop(self.site, -2)
-        form = {"bundles_sold": 22, "bundles_left_over": 2, "leftovers_went_to": "donated", "notes": "Busy day"}
+        form = {
+            "bundles_standard": 15, "bundles_at_cost": 5, "bundles_free": 2, "bundles_left_over": 2,
+            "leftovers_went_to": "donated", "donations": "12.00", "notes": "Busy day",
+        }
         response = self.cm.put(f"/api/manager/drops/{drop.id}/report/", form, format="json")
         self.assertEqual(response.data["report"]["leftovers_label"], "Donated")
+        self.assertEqual(response.data["report"]["bundles_sold"], 22)
         # Saving again updates the same report.
-        self.cm.put(f"/api/manager/drops/{drop.id}/report/", {**form, "bundles_sold": 23}, format="json")
+        self.cm.put(f"/api/manager/drops/{drop.id}/report/", {**form, "bundles_free": 3}, format="json")
         self.assertEqual(DropReport.objects.get().bundles_sold, 23)
 
     def test_cannot_log_a_drop_before_it_happens(self):
         drop = make_drop(self.site, 3)
-        response = self.cm.put(f"/api/manager/drops/{drop.id}/report/", {"bundles_sold": 5}, format="json")
+        response = self.cm.put(f"/api/manager/drops/{drop.id}/report/", {"bundles_standard": 5}, format="json")
         self.assertEqual(response.status_code, 400)
 
     def test_leftovers_need_a_destination(self):
         drop = make_drop(self.site, -2)
-        form = {"bundles_sold": 20, "bundles_left_over": 3, "leftovers_went_to": "none"}
+        form = {"bundles_standard": 20, "bundles_left_over": 3, "leftovers_went_to": "none"}
         response = self.cm.put(f"/api/manager/drops/{drop.id}/report/", form, format="json")
         self.assertIn("leftovers_went_to", response.data)
 
@@ -189,9 +193,25 @@ class BuyProduceTests(DropTestCase):
     def test_cannot_buy_more_than_the_farm_has(self):
         self.assertEqual(self.buy(401).status_code, 400)
 
-    def test_adding_to_a_confirmed_order_asks_the_farm_again(self):
+    def test_buying_makes_a_draft_the_farm_isnt_told_about_yet(self):
         self.buy(100)
-        FarmOrder.objects.update(status=FarmOrder.Status.CONFIRMED)
+        self.assertIsNone(FarmOrder.objects.get().sent_at)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_send_to_farms_sends_every_draft_in_one_batch(self):
+        User.objects.create_user("farm.user", role=User.Role.FARM, farm=self.farm, email="farm@example.com")
+        self.buy(150)
+        response = self.team.post(f"/api/admin/cycles/{self.drop.cycle.id}/send-to-farms/")
+        self.assertEqual(response.data["sent"], 1)
+        self.assertIsNotNone(FarmOrder.objects.get().sent_at)
+        self.assertIn("150 lbs Cabbage", mail.outbox[-1].body)
+        self.assertIn(" at 9:00 a.m.", mail.outbox[-1].body)
+        again = self.team.post(f"/api/admin/cycles/{self.drop.cycle.id}/send-to-farms/")
+        self.assertEqual(again.status_code, 400)
+
+    def test_adding_to_a_sent_confirmed_order_asks_the_farm_again(self):
+        self.buy(100)
+        FarmOrder.objects.update(status=FarmOrder.Status.CONFIRMED, sent_at=timezone.now())
         self.buy(100)
         self.assertEqual(FarmOrder.objects.get().status, FarmOrder.Status.WAITING)
 
@@ -216,7 +236,10 @@ class ImpactTests(DropTestCase):
     def test_impact_numbers_and_csv(self):
         drop = make_drop(self.site, -3)
         BundleOrder.objects.create(site_drop=drop, bundles=25)
-        DropReport.objects.create(site_drop=drop, bundles_sold=23, bundles_left_over=2, leftovers_went_to="donated")
+        DropReport.objects.create(
+            site_drop=drop, bundles_standard=18, bundles_at_cost=3, bundles_free=2, bundles_left_over=2,
+            leftovers_went_to="donated", donations=Decimal("15.00"),
+        )
         farm = Farm.objects.create(name="Canard Creek Farm")
         order = FarmOrder.objects.create(
             farm=farm, drop_cycle=drop.cycle, pickup_at=timezone.now() - timedelta(days=4), status=FarmOrder.Status.CONFIRMED
@@ -225,12 +248,14 @@ class ImpactTests(DropTestCase):
 
         totals = self.team.get("/api/admin/impact/").data["totals"]
         self.assertEqual((totals["pounds_diverted"], totals["bundles_sold"], totals["sites_active"]), (260, 23, 1))
+        self.assertEqual((totals["bundles_free"], totals["bundles_at_cost"], totals["donations"]), (2, 3, "15.00"))
+        self.assertEqual(totals["paid_to_farms"], "104.00")
 
         csv_response = self.team.get("/api/admin/impact.csv")
         self.assertEqual(csv_response["Content-Type"], "text/csv")
         lines = csv_response.content.decode().strip().splitlines()
         self.assertEqual(lines[0].split(",")[:3], ["Drop date", "Drop cycle", "Location"])
-        self.assertIn("Dartmouth,25,23,2,Donated,230", lines[1])
+        self.assertIn("Dartmouth,25,23,18,3,2,2,Donated,230,15.00", lines[1])
 
 
 class HostAndPublicTests(DropTestCase):
@@ -307,3 +332,98 @@ class AdminDeadEndTests(DropTestCase):
         self.assertEqual(data["sites_not_ordered"], ["Windsor"])
         self.assertEqual(data["next_cycle"]["site_count"], 1)
         self.assertEqual(self.cm.get("/api/admin/dashboard/").status_code, 403)
+
+
+class MoneyTests(DropTestCase):
+    def log(self, drop, standard=0, at_cost=0, free=0, donations="0"):
+        BundleOrder.objects.create(site_drop=drop, bundles=standard + at_cost + free)
+        return DropReport.objects.create(
+            site_drop=drop, bundles_standard=standard, bundles_at_cost=at_cost, bundles_free=free, donations=Decimal(donations)
+        )
+
+    def test_statement_follows_the_sliding_scale_and_the_2_50_split(self):
+        self.log(make_drop(self.site, -30), standard=1)  # the location's first drop
+        drop = make_drop(self.site, -3)
+        self.log(drop, standard=10, at_cost=4, free=2, donations="6.00")
+        statement = self.cm.get("/api/manager/drops/").data  # recent drops only, so the first drop isn't listed
+        mine = next(d for d in statement if d["id"] == drop.id)["statement"]
+        # Collected 10 x $10 + 4 x $7.50 = $130. Owes 14 paid bundles x $7.50 = $105.
+        self.assertEqual((mine["collected"], mine["owed_to_square_roots"]), ("130.00", "105.00"))
+        # Keeps $2.50 on each of the 10 standard bundles, plus $6 in donations.
+        self.assertEqual(mine["manager_keeps"], "31.00")
+        self.assertFalse(mine["first_drop"])
+
+    def test_first_drop_price_only_for_new_locations(self):
+        first = make_drop(self.site, -3)
+        self.log(first, standard=10)
+        row = self.team.get("/api/admin/money/").data["statements"][0]
+        self.assertFalse(row["first_drop"])  # an existing location: normal price
+        Site.objects.filter(pk=self.site.pk).update(first_drop_pricing=True)
+        row = self.team.get("/api/admin/money/").data["statements"][0]
+        self.assertTrue(row["first_drop"])
+        self.assertEqual(row["owed_to_square_roots"], "37.50")  # 10 x $3.75
+
+    def test_locations_added_in_the_portal_get_the_first_drop_price(self):
+        created = self.team.post("/api/admin/locations/", {"name": "Bedford", "address": "1 Library Rd"}, format="json")
+        self.assertTrue(created.data["first_drop_pricing"])
+
+    def test_mark_payment_received_and_undo(self):
+        drop = make_drop(self.site, -3)
+        self.log(drop, standard=4)
+        totals = self.team.get("/api/admin/money/").data["totals"]
+        self.assertEqual(totals["outstanding_count"], 1)
+        self.team.post(f"/api/admin/money/{drop.id}/received/")
+        self.assertEqual(self.team.get("/api/admin/money/").data["totals"]["outstanding_count"], 0)
+        self.team.delete(f"/api/admin/money/{drop.id}/received/")
+        self.assertEqual(self.team.get("/api/admin/money/").data["totals"]["outstanding_count"], 1)
+
+    def test_money_csv(self):
+        self.log(make_drop(self.site, -3), standard=2, free=1)
+        lines = self.team.get("/api/admin/money.csv").content.decode().strip().splitlines()
+        self.assertTrue(lines[1].split(",")[1] == "Dartmouth")
+
+    def test_settings_change_prices_and_check_them(self):
+        response = self.team.patch("/api/admin/settings/", {"standard_price": "12.00", "staging_location": "SMU loading dock"}, format="json")
+        self.assertEqual(response.data["manager_share"], "4.50")
+        bad = self.team.patch("/api/admin/settings/", {"at_cost_price": "20.00"}, format="json")
+        self.assertIn("at_cost_price", bad.data)
+        self.assertEqual(APIClient().get("/api/pricing/").data["standard_price"], "12.00")
+        self.assertEqual(self.cm.get("/api/admin/settings/").status_code, 403)
+
+
+class DeliveryTests(DropTestCase):
+    def test_home_delivery_only_where_offered_and_needs_an_address(self):
+        drop = make_drop(self.site, 5)
+        url = f"/api/manager/drops/{drop.id}/preorders/"
+        no_partner = self.cm.post(url, {"customer_name": "Alex", "delivery": True, "delivery_address": "1 Main St"}, format="json")
+        self.assertIn("delivery", no_partner.data)
+        Site.objects.filter(pk=self.site.pk).update(delivery_partner="BayRides")
+        no_address = self.cm.post(url, {"customer_name": "Alex", "delivery": True}, format="json")
+        self.assertIn("delivery_address", no_address.data)
+        ok = self.cm.post(url, {"customer_name": "Alex", "delivery": True, "delivery_address": "1 Main St", "price_tier": "at_cost"}, format="json")
+        self.assertEqual((ok.data["delivery"], ok.data["price_tier_label"]), (True, "At cost"))
+
+    def test_logistics_sheet_and_deliveries_csv(self):
+        drop = make_drop(self.site, 5)
+        BundleOrder.objects.create(site_drop=drop, bundles=20)
+        Preorder.objects.create(site_drop=drop, customer_name="Sam", delivery=True, delivery_address="9 Bay Rd", bundles=2)
+        farm = Farm.objects.create(name="Canard Creek Farm")
+        order = FarmOrder.objects.create(farm=farm, drop_cycle=drop.cycle, pickup_at=timezone.now() + timedelta(days=4))
+        FarmOrderLine.objects.create(order=order, produce="Carrots", pounds=120, price_per_pound=Decimal("0.35"))
+        FarmOrderLine.objects.create(order=order, produce="Cabbage", pounds=80, price_per_pound=Decimal("0.40"))
+
+        sheet = self.team.get(f"/api/admin/cycles/{drop.cycle.id}/logistics/").data
+        self.assertEqual(sheet["bundles_total"], 20)
+        self.assertEqual(sheet["sorting"][0], {"produce": "Carrots", "pounds": 120, "per_bundle": 6.0})
+        self.assertEqual(sheet["sites"][0]["deliveries"], 1)
+        self.assertEqual(sheet["deliveries"][0]["address"], "9 Bay Rd")
+
+        csv_text = self.team.get(f"/api/admin/cycles/{drop.cycle.id}/deliveries.csv").content.decode()
+        self.assertIn("Sam,,9 Bay Rd,2,no", csv_text)
+
+    def test_dashboard_reminds_to_send_orders_after_the_cutoff(self):
+        drop = make_drop(self.site, 3, cutoff_days_from_now=-1)
+        farm = Farm.objects.create(name="Canard Creek Farm")
+        FarmOrder.objects.create(farm=farm, drop_cycle=drop.cycle, pickup_at=timezone.now() + timedelta(days=2))
+        data = self.team.get("/api/admin/dashboard/").data
+        self.assertEqual(data["orders_to_send"][0]["count"], 1)

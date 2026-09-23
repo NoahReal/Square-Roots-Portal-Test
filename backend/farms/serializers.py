@@ -72,5 +72,5 @@ class FarmOrderSerializer(serializers.ModelSerializer):
         fields = [
             "id", "drop_cycle_name", "drop_date", "pickup_at", "pickup_notes",
             "status", "status_label", "farm_note", "responded_at",
-            "payment", "payment_label", "paid_on", "lines", "total",
+            "payment", "payment_label", "paid_on", "sent_at", "lines", "total",
         ]

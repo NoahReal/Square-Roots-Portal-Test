@@ -1,11 +1,12 @@
 from django.urls import path
 
-from . import views, views_admin, views_manager
+from . import views, views_admin, views_manager, views_operations
 
 urlpatterns = [
     # Public
     path("sites/", views.SiteListView.as_view()),
     path("drop-dates/", views.DropDatesView.as_view()),
+    path("pricing/", views.PricingView.as_view()),
     # Host sites
     path("host/drops/", views.HostDropListView.as_view()),
     # Community Managers
@@ -25,4 +26,10 @@ urlpatterns = [
     path("admin/dashboard/", views_admin.DashboardView.as_view()),
     path("admin/impact/", views_admin.ImpactView.as_view()),
     path("admin/impact.csv", views_admin.ImpactCsvView.as_view()),
+    path("admin/settings/", views_operations.SettingsView.as_view()),
+    path("admin/money/", views_operations.MoneyView.as_view()),
+    path("admin/money.csv", views_operations.MoneyCsvView.as_view()),
+    path("admin/money/<int:pk>/received/", views_operations.RemittanceView.as_view()),
+    path("admin/cycles/<int:pk>/logistics/", views_operations.LogisticsView.as_view()),
+    path("admin/cycles/<int:pk>/deliveries.csv", views_operations.DeliveriesCsvView.as_view()),
 ]

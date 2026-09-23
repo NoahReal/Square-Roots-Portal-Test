@@ -17,7 +17,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import Application, User
-from drops.models import BundleOrder, DropCycle, DropReport, Preorder, Site, SiteDrop
+from drops.models import BundleOrder, DropCycle, DropReport, OperatingSettings, Preorder, Site, SiteDrop
 from farms.models import Farm, FarmOrder, FarmOrderLine, ProduceListing
 from website.models import ContactMessage, Event
 
@@ -38,6 +38,12 @@ SITES = [
     ("Dartmouth", "105 Highfield Park Dr", "", "", ""),
     ("Cole Harbour", "15 Bissett Rd", "https://www.instagram.com/coleharbourfridge/", "https://www.facebook.com/profile.php?id=61555331890264", ""),
 ]
+
+# Home delivery partners, from what Square Roots told us (BayRides serves the St. Margaret's Bay area).
+DELIVERY_PARTNERS = {"Upper Tantallon": "BayRides"}
+
+# Made-up addresses for demo home deliveries.
+DELIVERY_ADDRESSES = ["12 Peggy's Cove Rd", "48 Hubley Mill Lake Rd", "7 Boutiliers Point Rd", "215 Hammonds Plains Rd"]
 
 # Made-up ordering habits for the demo: (usual bundles per drop, month the location started this year, drop hours)
 SITE_HABITS = {
@@ -194,11 +200,17 @@ class Command(BaseCommand):
         Event.objects.all().delete()
 
     def create_sites(self):
+        # Prices from Square Roots: $10 standard, $7.50 at cost, free bundles, $1.99 delivery.
+        # The first-drop price isn't known yet; $3.75 is a sample for the team to change.
+        OperatingSettings.objects.all().delete()
+        OperatingSettings.current()
         sites = {}
         for order, (name, address, instagram, facebook, highlight) in enumerate(SITES):
             sites[name] = Site.objects.create(
                 name=name, address=address, instagram_url=instagram, facebook_url=facebook,
-                highlight=highlight, sort_order=order,
+                highlight=highlight, sort_order=order, delivery_partner=DELIVERY_PARTNERS.get(name, ""),
+                # Only the newest location started this year with the first-drop incentive.
+                first_drop_pricing=name == "New Glasgow",
             )
         return sites
 
@@ -310,11 +322,22 @@ class Command(BaseCommand):
         BundleOrder.objects.create(site_drop=site_drop, bundles=bundles, updated_by=manager)
 
         # Reports: logged for every past drop, except the last one at Dartmouth and the North End.
+        # Sold bundles are split across the sliding scale: about 70% standard, 20% at cost, 10% free.
         if number < 0 and not (number == -1 and site_name in ("Dartmouth", "Halifax - North End")):
             left_over = self.random.choice([0, 0, 0, 1, 2, 3])
+            sold = bundles - left_over
+            free = round(sold * self.random.uniform(0.05, 0.15))
+            at_cost = round(sold * self.random.uniform(0.15, 0.25))
             DropReport.objects.create(
-                site_drop=site_drop, bundles_sold=bundles - left_over, bundles_left_over=left_over,
+                site_drop=site_drop,
+                bundles_standard=sold - free - at_cost,
+                bundles_at_cost=at_cost,
+                bundles_free=free,
+                bundles_left_over=left_over,
                 leftovers_went_to=self.random.choice(LEFTOVER_PLACES) if left_over else DropReport.Leftovers.NONE,
+                donations=Decimal(self.random.choice([0, 0, 5, 10, 15, 20, 25])),
+                # Community Managers have paid Square Roots for everything except the last two drops.
+                remittance_received_on=site_drop.drop_date + timedelta(days=6) if number < -2 else None,
             )
 
         # Preorders at the sites with demo Community Managers, for the last drop and this Saturday.
@@ -323,8 +346,16 @@ class Command(BaseCommand):
                 Preorder.objects.create(
                     site_drop=site_drop, customer_name=customer, bundles=self.random.choice([1, 1, 1, 2]),
                     phone=f"902-555-{self.random.randint(1000, 9999)}" if self.random.random() < 0.6 else "",
+                    price_tier=self.random.choice(["standard"] * 7 + ["at_cost"] * 2 + ["free"]),
                     paid=number < 0 or self.random.random() < 0.5,
                     picked_up=number < 0,
+                )
+        # Home deliveries where a delivery partner operates, for this Saturday.
+        if site_drop.site.delivery_partner and number == 0:
+            for customer, address in zip(self.random.sample(CUSTOMERS, 3), DELIVERY_ADDRESSES):
+                Preorder.objects.create(
+                    site_drop=site_drop, customer_name=customer, bundles=1, delivery=True, delivery_address=address,
+                    phone=f"902-555-{self.random.randint(1000, 9999)}", paid=True,
                 )
         return bundles
 
@@ -351,6 +382,8 @@ class Command(BaseCommand):
                 responded_at=None if status == FarmOrder.Status.WAITING else cycle.order_cutoff,
                 payment=FarmOrder.Payment.PAID if paid else FarmOrder.Payment.NOT_PAID,
                 paid_on=min(cycle.drop_date + timedelta(days=5), self.today) if paid else None,
+                # Orders go to farms in one batch once ordering closes; the drop in two weeks is still a draft.
+                sent_at=None if number >= 1 else cycle.order_cutoff,
             )
             # This farm's share of the pounds, split across two of its crops (rotating each cycle).
             pounds = bundles_total * 10 * share

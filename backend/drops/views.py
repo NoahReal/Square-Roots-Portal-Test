@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsHostSite
-from .models import DropCycle, Site, SiteDrop
+from .models import DropCycle, OperatingSettings, Site, SiteDrop
 from .serializers import SiteSerializer
 
 
@@ -68,6 +68,27 @@ class HostDropListView(APIView):
                         "has_happened": drop.has_happened,
                     }
                     for drop in drops
+                ],
+            }
+        )
+
+
+class PricingView(APIView):
+    """Bundle prices and where home delivery is offered. Public: shown on the website and portal screens."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        settings = OperatingSettings.current()
+        return Response(
+            {
+                "standard_price": f"{settings.standard_price:.2f}",
+                "at_cost_price": f"{settings.at_cost_price:.2f}",
+                "manager_share": f"{settings.manager_share:.2f}",
+                "delivery_fee": f"{settings.delivery_fee:.2f}",
+                "delivery": [
+                    {"site": site.name, "partner": site.delivery_partner}
+                    for site in Site.objects.filter(is_active=True).exclude(delivery_partner="")
                 ],
             }
         )

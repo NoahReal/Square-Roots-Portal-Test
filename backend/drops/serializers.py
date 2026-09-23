@@ -1,7 +1,8 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import BUNDLE_POUNDS, DropReport, Preorder, Site, SiteDrop
+from .models import BUNDLE_POUNDS, DropReport, OperatingSettings, Preorder, Site, SiteDrop
+from .money import for_json, statement
 
 
 class SiteSerializer(serializers.ModelSerializer):
@@ -11,7 +12,7 @@ class SiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Site
-        fields = ["id", "name", "address", "instagram_url", "facebook_url", "highlight", "next_drop"]
+        fields = ["id", "name", "address", "instagram_url", "facebook_url", "highlight", "delivery_partner", "next_drop"]
 
     def get_next_drop(self, site):
         today = timezone.localdate()
@@ -22,9 +23,14 @@ class SiteSerializer(serializers.ModelSerializer):
 
 
 class PreorderSerializer(serializers.ModelSerializer):
+    price_tier_label = serializers.CharField(source="get_price_tier_display", read_only=True)
+
     class Meta:
         model = Preorder
-        fields = ["id", "customer_name", "phone", "bundles", "paid", "picked_up"]
+        fields = [
+            "id", "customer_name", "phone", "bundles", "price_tier", "price_tier_label",
+            "delivery", "delivery_address", "paid", "picked_up",
+        ]
         extra_kwargs = {
             "customer_name": {"error_messages": {"blank": "Please add the customer's name."}},
             "bundles": {"error_messages": {"invalid": "Enter a number of bundles, like 2."}},
@@ -38,18 +44,37 @@ class PreorderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A preorder needs at least 1 bundle.")
         return value
 
+    def validate(self, data):
+        delivery = data.get("delivery", getattr(self.instance, "delivery", False))
+        address = data.get("delivery_address", getattr(self.instance, "delivery_address", ""))
+        if delivery and not address.strip():
+            raise serializers.ValidationError({"delivery_address": "Add the address to deliver to."})
+        return data
+
 
 class DropReportSerializer(serializers.ModelSerializer):
     leftovers_label = serializers.CharField(source="get_leftovers_went_to_display", read_only=True)
 
     class Meta:
         model = DropReport
-        fields = ["bundles_sold", "bundles_left_over", "leftovers_went_to", "leftovers_label", "notes", "updated_at"]
-        read_only_fields = ["updated_at"]
+        fields = [
+            "bundles_standard", "bundles_at_cost", "bundles_free", "bundles_sold", "bundles_left_over",
+            "leftovers_went_to", "leftovers_label", "donations", "notes", "remittance_received_on", "updated_at",
+        ]
+        read_only_fields = ["bundles_sold", "remittance_received_on", "updated_at"]
+        number = {"error_messages": {"invalid": "Enter a number, or 0 if none."}}
         extra_kwargs = {
-            "bundles_sold": {"error_messages": {"invalid": "Enter how many bundles you sold, like 24."}},
-            "bundles_left_over": {"error_messages": {"invalid": "Enter a number, or 0 if none were left."}},
+            "bundles_standard": number,
+            "bundles_at_cost": number,
+            "bundles_free": number,
+            "bundles_left_over": number,
+            "donations": {"error_messages": {"invalid": "Enter an amount in dollars, like 12.50, or 0."}},
         }
+
+    def validate_donations(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Donations can't be below $0.")
+        return value
 
     def validate(self, data):
         if data.get("bundles_left_over", 0) > 0 and data.get("leftovers_went_to") == DropReport.Leftovers.NONE:
@@ -69,14 +94,18 @@ class SiteDropSerializer(serializers.ModelSerializer):
     preorder_count = serializers.SerializerMethodField()
     preorder_bundles = serializers.SerializerMethodField()
     picked_up_count = serializers.SerializerMethodField()
+    delivery_count = serializers.SerializerMethodField()
+    delivery_partner = serializers.CharField(source="site.delivery_partner", read_only=True)
     report = serializers.SerializerMethodField()
+    statement = serializers.SerializerMethodField()
 
     class Meta:
         model = SiteDrop
         fields = [
             "id", "cycle_name", "site_name", "drop_date", "starts_at", "ends_at", "order_cutoff",
             "ordering_open", "has_happened", "bundles", "order_updated_at",
-            "preorder_count", "preorder_bundles", "picked_up_count", "report",
+            "preorder_count", "preorder_bundles", "picked_up_count", "delivery_count", "delivery_partner",
+            "report", "statement",
         ]
 
     def _order(self, site_drop):
@@ -98,6 +127,16 @@ class SiteDropSerializer(serializers.ModelSerializer):
 
     def get_picked_up_count(self, site_drop):
         return sum(1 for p in site_drop.preorders.all() if p.picked_up)
+
+    def get_delivery_count(self, site_drop):
+        return sum(1 for p in site_drop.preorders.all() if p.delivery)
+
+    def get_statement(self, site_drop):
+        # Look the prices up once per list, not once per drop.
+        if not hasattr(self, "_settings"):
+            self._settings = OperatingSettings.current()
+        result = statement(site_drop, self._settings)
+        return for_json(result) if result else None
 
     def get_report(self, site_drop):
         report = getattr(site_drop, "report", None)

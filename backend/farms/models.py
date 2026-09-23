@@ -59,6 +59,8 @@ class FarmOrder(models.Model):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.WAITING)
     farm_note = models.CharField(max_length=500, blank=True, help_text="The farm's reason if it can't fill the order.")
     responded_at = models.DateTimeField(null=True, blank=True)
+    # Orders are drafts (farms can't see them) until the team sends them, after ordering closes.
+    sent_at = models.DateTimeField(null=True, blank=True)
     payment = models.CharField(max_length=16, choices=Payment.choices, default=Payment.NOT_PAID)
     paid_on = models.DateField(null=True, blank=True)
 

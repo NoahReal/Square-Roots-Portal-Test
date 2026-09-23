@@ -54,8 +54,9 @@ class FarmOrderListView(generics.ListAPIView):
     serializer_class = FarmOrderSerializer
 
     def get_queryset(self):
+        # Drafts stay hidden until the team sends the orders, after ordering closes.
         return (
-            FarmOrder.objects.filter(farm=farm_for(self.request))
+            FarmOrder.objects.filter(farm=farm_for(self.request), sent_at__isnull=False)
             .select_related("drop_cycle")
             .prefetch_related("lines")
         )
@@ -66,7 +67,7 @@ class _RespondToOrderView(APIView):
     new_status = None
 
     def post(self, request, pk):
-        order = get_object_or_404(FarmOrder, pk=pk, farm=farm_for(request))
+        order = get_object_or_404(FarmOrder, pk=pk, farm=farm_for(request), sent_at__isnull=False)
         if order.status != FarmOrder.Status.WAITING:
             raise ValidationError({"detail": "You've already answered this order."})
         order.status = self.new_status

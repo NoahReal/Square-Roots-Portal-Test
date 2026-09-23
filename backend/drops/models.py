@@ -1,4 +1,5 @@
 from datetime import time
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -6,6 +7,45 @@ from django.utils import timezone
 
 # Every Square Roots bundle is 10 lbs of produce.
 BUNDLE_POUNDS = 10
+
+
+class OperatingSettings(models.Model):
+    """Prices and logistics the Square Roots team sets on the admin Settings screen. There's only ever one row."""
+
+    standard_price = models.DecimalField(
+        max_digits=6, decimal_places=2, default=Decimal("10.00"),
+        help_text="Standard / pay-it-forward price for a 10 lb bundle.",
+    )
+    at_cost_price = models.DecimalField(
+        max_digits=6, decimal_places=2, default=Decimal("7.50"),
+        help_text="At-cost price for people who can't afford the standard price. "
+        "It's also what a Community Manager owes Square Roots for each paid bundle.",
+    )
+    first_drop_cost = models.DecimalField(
+        max_digits=6, decimal_places=2, default=Decimal("3.75"),
+        help_text="What a new location owes Square Roots per paid bundle at its very first drop (the first-drop incentive).",
+    )
+    delivery_fee = models.DecimalField(
+        max_digits=6, decimal_places=2, default=Decimal("1.99"), help_text="Home delivery fee, where delivery is offered.",
+    )
+    staging_location = models.CharField(
+        max_length=200, blank=True, help_text="Where farm produce is dropped off and sorted into bundles.",
+    )
+
+    class Meta:
+        verbose_name_plural = "operating settings"
+
+    def __str__(self):
+        return "Operating settings"
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    @property
+    def manager_share(self):
+        """What a Community Manager keeps from each standard bundle: $10.00 - $7.50 = $2.50."""
+        return self.standard_price - self.at_cost_price
 
 
 class Site(models.Model):
@@ -16,6 +56,13 @@ class Site(models.Model):
     instagram_url = models.URLField(blank=True)
     facebook_url = models.URLField(blank=True)
     highlight = models.CharField(max_length=200, blank=True, help_text="Shown under Location Highlights on the public site.")
+    # Blank if this location has no home delivery.
+    delivery_partner = models.CharField(max_length=100, blank=True, help_text="Who does home delivery here, e.g. BayRides.")
+    # New locations get the first-drop incentive on their first drop. Locations that were running
+    # before they were added to the portal shouldn't, so this is off unless the team turns it on.
+    first_drop_pricing = models.BooleanField(
+        default=False, help_text="Charge the first-drop price at this location's first drop (for brand-new locations)."
+    )
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
 
@@ -87,7 +134,15 @@ class Preorder(models.Model):
     site_drop = models.ForeignKey(SiteDrop, on_delete=models.CASCADE, related_name="preorders")
     customer_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=30, blank=True)
+    class PriceTier(models.TextChoices):
+        STANDARD = "standard", "Standard"
+        AT_COST = "at_cost", "At cost"
+        FREE = "free", "Free"
+
     bundles = models.PositiveSmallIntegerField(default=1)
+    price_tier = models.CharField(max_length=16, choices=PriceTier.choices, default=PriceTier.STANDARD)
+    delivery = models.BooleanField(default=False, help_text="Home delivery instead of picking up at the drop.")
+    delivery_address = models.CharField(max_length=200, blank=True)
     paid = models.BooleanField(default=False)
     picked_up = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -110,7 +165,15 @@ class DropReport(models.Model):
         OTHER = "other", "Something else"
 
     site_drop = models.OneToOneField(SiteDrop, on_delete=models.CASCADE, related_name="report")
-    bundles_sold = models.PositiveIntegerField()
+    # Sliding-scale pricing: how many bundles went at each price.
+    bundles_standard = models.PositiveIntegerField(default=0)
+    bundles_at_cost = models.PositiveIntegerField(default=0)
+    bundles_free = models.PositiveIntegerField(default=0)
+    # The total of the three above; kept up to date in save().
+    bundles_sold = models.PositiveIntegerField(default=0)
+    donations = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
+    # When the Community Manager's payment to Square Roots for this drop arrived.
+    remittance_received_on = models.DateField(null=True, blank=True)
     bundles_left_over = models.PositiveIntegerField(default=0)
     leftovers_went_to = models.CharField(max_length=16, choices=Leftovers.choices, default=Leftovers.NONE)
     notes = models.TextField(blank=True)
@@ -118,3 +181,7 @@ class DropReport(models.Model):
 
     def __str__(self):
         return f"Report for {self.site_drop}"
+
+    def save(self, *args, **kwargs):
+        self.bundles_sold = self.bundles_standard + self.bundles_at_cost + self.bundles_free
+        super().save(*args, **kwargs)
