@@ -71,14 +71,18 @@ Every demo password is **`squareroots`**. The portal login page lists these acco
 | `cm.sackville` | Liam Boudreau | Community Manager (Lower Sackville) |
 | `farm.gaspereau` | Ruth Eisenhauer | Farm (Gaspereau Valley Growers) |
 | `farm.canard` | Tom Van Dyk | Farm (Canard Creek Farm) |
-| `host.fairview` | Grace Oickle | Host Site (Fairview / Clayton Park) |
+| `host.dartmouth` | Grace Oickle | Host Site (Dartmouth) |
 | `apply.bedford` | Priya Nair | Community Manager, **waiting for approval** |
 | `apply.northmountain` | Sam Porter | Farm, **waiting for approval** |
 | `apply.windsorhall` | Dana Whynot | Host Site, **waiting for approval** |
 
 The demo data also includes the 11 real Square Roots locations, two fictional Annapolis Valley
-farms with produce posted, four drop cycles (two past, two coming up, always relative to today's
-date) and farm orders in every state: waiting for the farm, confirmed, can't fill, paid and not paid.
+farms, and **a full year of drops** (every second Saturday), all worked out from today's date:
+past drops with orders, reports and farm purchases (for the Impact screen); this Saturday's drop,
+whose ordering has just closed; the drop in two weeks, where about half the sites have ordered
+(not Dartmouth, so you can order as `cm.dartmouth`) and only one farm has been bought from; and later
+drops open for ordering. The last drop at Dartmouth and the North End is still waiting for its
+after-drop report.
 Run `python manage.py seed` again at any time to reset everything.
 
 The `admin` account can also open Django's built-in data admin at http://127.0.0.1:8000/django-admin/.
@@ -97,22 +101,43 @@ Host Site, or they can use the forms on the For Farms and Become a Community Man
 Emails (to the team about new sign-ups and contact messages, and to the applicant when they're
 approved or declined) aren't really sent. They're printed in the terminal running `runserver`.
 
-## Farm screens
+## What each role can do
 
-Log in as `farm.gaspereau` or `farm.canard`.
+Every bundle is 10 lbs of produce.
 
-- **Produce** (`/portal/farm/produce`): post seconds produce with pounds, price per pound, an
-  optional "available until" date and notes. Edit it, or mark it sold out. Sold-out produce is
-  hidden from the farm but kept for the team's records.
-- **Pickups** (`/portal/farm/pickups`): Square Roots' orders from the farm, grouped into "Needs your
-  answer", "Upcoming pickups" and "Past pickups", each with its pickup time, produce, totals and
-  payment status. The farm can **confirm** an order, or say it **can't fill** it with a note, and
-  the team is emailed either way. Totals at the top show orders to answer, the next pickup, and
-  money owed for past pickups.
+**Admin** (`admin`)
+- **Sign-ups**: approve or decline people who signed up on the website.
+- **Drop Cycles**: create a cycle (drop date, when ordering closes, which locations), change the
+  date or cutoff for one location, add or remove locations, and delete cycles nobody has ordered in.
+- **Orders**: for one cycle, every site's bundle order, pounds needed compared with pounds bought
+  from farms, and the purchase list for each farm. Remove items before pickup, mark farm orders
+  paid, and print the purchase lists.
+- **Farms**: everything farms have posted. Choose an upcoming cycle and buy from any listing. It
+  goes onto that farm's order, comes off their available pounds, and the farm is asked to confirm.
+  If the farm had already confirmed, it's asked again.
+- **Impact**: pounds diverted, bundles sold, locations active and drops held for a year; a chart
+  per drop; totals by location; where leftovers went; and **Download CSV** (one row per site per drop).
+- **API**: every endpoint, plus login testing tools.
 
-Until the admin Orders screen is built (step 4), the team creates farm orders and marks them paid
-in Django's admin at `/django-admin/` (Farms → Farm orders). The payment date is filled in
-automatically.
+**Community Manager** (`cm.dartmouth`, `cm.northend`, `cm.sackville`)
+- **Order**: a big +/− counter for bundles, with the cutoff countdown, preorder count and how the
+  last drop went. Orders lock at the cutoff (the server enforces this too).
+- **Preorders**: add customers, then tick **Paid** and **Picked up** at the drop. People still to
+  collect stay at the top, and there's a name search for long lists.
+- **After Drop**: log bundles sold and left over, and where leftovers went.
+
+**Farm** (`farm.gaspereau`, `farm.canard`)
+- **Produce**: post, edit or mark sold out the seconds produce you have.
+- **Pickups**: confirm or say you can't fill each order, with pickup times, totals and payment status.
+
+**Host Site** (`host.dartmouth`)
+- **Drop Dates**: the next drop at your space, expected bundles, later and recent drops, and who
+  to contact.
+
+The public **Drop Dates & Locations** page shows this year's real drop dates from the drop cycles.
+
+Emails (new orders to farms, farm replies, sign-ups, approvals) are printed in the `runserver`
+terminal instead of being sent. Farm orders can also be edited in Django's admin at `/django-admin/`.
 
 ## Testing logins and the API
 
@@ -161,8 +186,13 @@ backend/                 Django + Django REST Framework
     permissions.py       IsAdminRole, IsCommunityManager, IsFarm, IsHostSite (approved accounts only)
     notifications.py     "emails" (printed to the terminal for now)
     management/commands/seed.py   demo data
-  drops/                 Square Roots locations and drop cycles
+  drops/                 locations, drop cycles, site drops, bundle orders, preorders, reports
+    views.py             public drop dates and locations, Host Site drops
+    views_manager.py     Community Manager: order, preorders, after-drop report
+    views_admin.py       Admin: drop cycles, cycle orders overview, impact and CSV
   farms/                 farms, produce listings, farm orders and their pickups
+    views.py             Farm: produce and pickups
+    views_admin.py       Admin: all produce, buying from farms, marking orders paid
   website/               Contact Us messages
 frontend/                React (Vite), plain CSS
   public/photos, logos   images for the public website
@@ -172,7 +202,8 @@ frontend/                React (Vite), plain CSS
     styles.css           portal layout, buttons, forms, blocks
     public.css           public website pages
     farm.css             farm Produce and Pickups screens
-    format.js            money, pounds and date formatting
+    screens.css          Community Manager, Host Site and Admin screens (and print styles)
+    format.js            money, pounds, dates, times and countdowns
     App.jsx              which page shows at which web address
     roles.js             each role's portal menu. Add a screen here to put it in the menu
     signupRoles.js       the three kinds of partner sign-up
@@ -181,7 +212,7 @@ frontend/                React (Vite), plain CSS
     demoAccounts.js      demo usernames (must match the backend seed command)
     components/          site header/footer, portal layout, sign-up form, shared sections
     pages/site/          the public website, one file per page
-    pages/portal/        the partner portal, one file per screen (farm screens in pages/portal/farm/)
+    pages/portal/        the partner portal, one file per screen, in admin/, manager/, farm/ and host/
 ```
 
 ### How login works
@@ -194,12 +225,12 @@ example `permission_classes = [IsAdminRole]`.
 
 - [x] 1. Auth and roles, with seed users for each role
 - [x] Public website recreated, with partner sign-up and admin approval
-- [ ] 2. Drop cycles: admin creates cycles with an order cutoff and drop date per site
-- [ ] 3. Community Manager ordering: submit and edit bundle counts before the cutoff
-- [ ] 4. Admin aggregation: total orders per cycle, turned into a purchase list per farm
-- [ ] 5. Farm availability: farms post produce and quantities, admin allocates
-  (farm side done: Produce and Pickups screens; admin allocation still to build)
-- [ ] 6. Impact dashboard: lbs diverted, bundles sold, sites active, CSV export
+- [x] 2. Drop cycles: admin creates cycles with an order cutoff and drop date per site
+- [x] 3. Community Manager ordering: submit and edit bundle counts before the cutoff
+- [x] 4. Admin aggregation: total orders per cycle, turned into a purchase list per farm
+- [x] 5. Farm availability: farms post produce and quantities, admin allocates
+- [x] 6. Impact dashboard: lbs diverted, bundles sold, sites active, CSV export
+- [x] Extras: Community Manager preorders and after-drop reports, Host Site drop dates
 
 Not in this prototype: real payments, sending real SMS or email (these are stubbed), and public
 customer ordering.
