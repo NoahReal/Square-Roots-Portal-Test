@@ -39,6 +39,11 @@ export function dateAndTime(isoDateTime) {
   return `${day} · ${time}`
 }
 
+// "Tuesday, October 6 at 5:00 p.m." for use inside a sentence (Halifax time)
+export function dateAtTime(isoDateTime) {
+  return dateAndTime(isoDateTime).replace(' · ', ' at ')
+}
+
 // Today's date as "2026-09-22", for the minimum on date pickers
 export function todayIso() {
   const now = new Date()

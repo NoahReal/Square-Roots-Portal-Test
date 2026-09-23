@@ -74,9 +74,12 @@ export default function LocationsPage() {
               </li>
               <li>
                 <strong>Free</strong>
-                <span>For people facing food insecurity. Ask your Community Manager.</span>
+                <span>If money is too tight right now</span>
               </li>
             </ul>
+            <Link to="/reserve" className="btn btn-primary">
+              Reserve a bundle
+            </Link>
             {pricing.delivery.length > 0 && (
               <p className="delivery-note">
                 Home delivery is available{' '}
@@ -104,6 +107,11 @@ export default function LocationsPage() {
                   </p>
                 ) : (
                   <p className="location-next muted">Next drop date coming soon</p>
+                )}
+                {site.online_reservations && site.next_drop && (
+                  <Link to={`/reserve?site=${site.id}`} className="btn btn-primary btn-small location-reserve">
+                    Reserve at {site.name}
+                  </Link>
                 )}
                 <div className="location-links">
                   {site.instagram_url && (

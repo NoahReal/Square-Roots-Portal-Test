@@ -24,6 +24,7 @@ licensed for Wix sites only.
 | **Community Manager** | Order bundles before the cutoff, track preorders, log sales after a drop |
 | **Farm** | Post available produce, confirm orders, see pickups and payment status |
 | **Host Site** | See upcoming drop dates at their location (read-only) |
+| **Customers** (no account) | Reserve bundles on the website, then change or cancel them from a private link |
 
 ## Setup
 
@@ -139,6 +140,28 @@ Host Site, or they can use the forms on the For Farms and Become a Community Man
 Emails (to the team about new sign-ups and contact messages, and to the applicant when they're
 approved or declined) aren't really sent. They're printed in the terminal running `runserver`.
 
+## Reserving a bundle (customers)
+
+Customers reserve on the website at `/reserve` (also linked from the home page, the header and each
+location on Drop Dates & Locations). No account is needed.
+
+1. They choose a location and drop, how many bundles (up to 4), and a price on the sliding scale.
+   All three prices look the same on screen, and the choice is private.
+2. They get a **pickup code** (like `K7M4`) and a **private link** to change or cancel until ordering
+   closes. Both are emailed if they give an email, and the device remembers the link.
+3. The reservation lands in the Community Manager's **Preorders** list, marked **Online**. At the
+   drop, the manager types the code and taps once to mark it paid and picked up.
+
+Each location sets aside a number of bundles for reservations (on the Community Manager's Preorders
+screen, or the admin Locations screen). Online reservations and ones the manager adds both count.
+When they're gone, customers can **join a waitlist**. When someone cancels, the first person in line
+whose request fits gets the bundle automatically and is emailed. Cancelling deletes the customer's
+details. The Reserve form has a hidden spam trap and a limit of 30 reservations an hour per visitor.
+
+In the demo, the drop two weeks out has online reservations at most locations. The Halifax North End
+is full, with two people on the waitlist (log in as `cm.northend` to see it). Middle Musquodoboit has
+online reservations turned off.
+
 ## How Square Roots works (and how the portal follows it)
 
 - **Bundles** are 10 lbs of seconds produce, sold on a **sliding scale**: $10 standard (pay it
@@ -193,7 +216,9 @@ screen. **The first-drop price ($3.75) is a sample**; the real one hasn't been c
   last drop went. Orders lock at the cutoff (the server enforces this too).
 - **Preorders**: add customers with their price (standard, at cost or free) and, where offered, home
   delivery with an address. Tick **Paid** and **Picked up** at the drop. People still to collect stay
-  at the top, and there's a name search for long lists.
+  at the top, and there's a search by name or pickup code for long lists. Type a customer's **pickup
+  code** to find them and mark them paid and picked up in one tap. The **waitlist** is shown below
+  the list, and **Online reservations** can be switched on or off, with how many bundles to set aside.
 - **After Drop**: log bundles sold at each price, donations, and leftovers. Each logged drop shows a
   statement: collected, owed to Square Roots, and what you keep, plus whether payment was received.
 
@@ -268,7 +293,9 @@ backend/                 Django + Django REST Framework
     management/commands/seed.py   demo data
   drops/                 locations, drop cycles, site drops, bundle orders, preorders, reports
     views.py             public drop dates and locations, Host Site drops
-    views_manager.py     Community Manager: order, preorders, after-drop report
+    views_manager.py     Community Manager: order, preorders, pickup codes, reservation settings, after-drop report
+    views_reserve.py     public: customers reserving, changing and cancelling bundles
+    reservations.py      what's left to reserve, the waitlist, and customer emails
     views_admin.py       Admin: drop cycles, orders overview, locations, dashboard, impact and CSV
     views_operations.py  Admin: settings, money (statements and payments), packing and delivery sheet
     money.py             how a drop's money is worked out (sliding scale, $2.50 split, first drop)
@@ -316,6 +343,6 @@ example `permission_classes = [IsAdminRole]`.
 - [x] 5. Farm availability: farms post produce and quantities, admin allocates
 - [x] 6. Impact dashboard: lbs diverted, bundles sold, sites active, CSV export
 - [x] Extras: Community Manager preorders and after-drop reports, Host Site drop dates
+- [x] Customer reservations (stage 1): reserve online, pickup codes, waitlist, change or cancel
 
-Not in this prototype: real payments, sending real SMS or email (these are stubbed), and public
-customer ordering.
+Not in this prototype: real payments, and sending real SMS or email (these are stubbed).

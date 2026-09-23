@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import PartnerPortalBand from '../../components/PartnerPortalBand'
 import PartnersSection from '../../components/PartnersSection'
+import ReserveFeature from '../../components/ReserveFeature'
 import RotatingTagline from '../../components/RotatingTagline'
 
 const PHOTO_STRIP = [
@@ -28,6 +29,7 @@ export default function HomePage() {
         </div>
       </section>
       <RotatingTagline />
+      <ReserveFeature />
 
       <FeatureBlock
         label="Mission"

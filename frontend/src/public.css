@@ -115,6 +115,10 @@
   color: var(--sr-white);
 }
 
+.public-nav .reserve-button {
+  color: var(--sr-ink);
+}
+
 /* ---------- Footer (matches the live site) ---------- */
 
 .public-footer {
@@ -1067,6 +1071,11 @@
     font-size: 1rem;
   }
 
+  /* Reserve a Bundle sits just before Partner Portal. */
+  .public-nav > a.reserve-button {
+    margin-right: 0;
+  }
+
   .nav-dropdown {
     position: relative;
   }
@@ -1213,4 +1222,396 @@
     border-right: 6px solid var(--sr-ink-soft);
     padding-right: 24px;
   }
+}
+
+/* ---------- Reserve a Bundle (customers) ---------- */
+
+.notice-info {
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-green-dark);
+  font-weight: 400;
+}
+
+.reserve-section {
+  padding: 32px var(--gutter) 64px;
+}
+
+.reserve-container {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.reserve-loading {
+  padding: 48px var(--gutter);
+}
+
+.reserve-step {
+  padding: 24px 0;
+  border-top: 1px solid var(--sr-line);
+}
+
+.reserve-step h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  font-size: clamp(1.4rem, 4vw, 1.75rem);
+}
+
+.reserve-step-number {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--sr-green-dark);
+  color: var(--sr-white);
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.reserve-hint {
+  margin: 10px 0 0;
+}
+
+.drop-card {
+  padding: 16px 18px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-green-dark);
+}
+
+.drop-card p {
+  margin: 0 0 4px;
+}
+
+.drop-card-when {
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.availability {
+  display: inline-block;
+  margin: 10px 0 0 !important;
+  padding: 4px 12px;
+  background: var(--sr-green-dark);
+  color: var(--sr-white);
+  font-weight: 500;
+}
+
+.availability-low {
+  background: var(--sr-yellow);
+  color: var(--sr-ink);
+}
+
+.availability-full {
+  display: block;
+  background: var(--sr-cream);
+  color: var(--sr-ink);
+  border: 2px solid var(--sr-maroon);
+  font-weight: 400;
+}
+
+/* The three prices look exactly alike on purpose: no choice stands out as "lesser". */
+.price-choices {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.price-choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  align-items: baseline;
+  padding: 14px 16px;
+  border: 1px solid var(--sr-line);
+  background: var(--sr-white);
+  cursor: pointer;
+}
+
+.price-choice input {
+  grid-row: 1 / span 3;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--sr-green-dark);
+}
+
+.price-choice-amount {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.price-choice-title {
+  font-weight: 500;
+}
+
+.price-choice-text {
+  color: var(--sr-ink-soft);
+  font-size: 0.95rem;
+}
+
+.price-choice-on {
+  border: 2px solid var(--sr-green-dark);
+  padding: 13px 15px;
+}
+
+.price-choice:focus-within,
+.choice:focus-within {
+  outline: 3px solid var(--sr-green-dark);
+  outline-offset: 2px;
+}
+
+.reserve-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+  padding: 20px;
+  background: var(--sr-yellow);
+}
+
+.reserve-summary-label {
+  display: block;
+  font-weight: 500;
+}
+
+.reserve-summary-total {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.btn-large {
+  min-height: 56px;
+  padding: 0 32px;
+  font-size: 1.1rem;
+}
+
+.reserve-summary .btn-large {
+  flex: 1 1 220px;
+}
+
+.reserve-privacy {
+  margin: 16px 0 0;
+  color: var(--sr-ink-soft);
+  font-size: 0.95rem;
+}
+
+.my-reservations {
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  background: var(--sr-white);
+  border: 2px solid var(--sr-green-dark);
+}
+
+.my-reservations h2 {
+  margin: 0 0 8px;
+  font-size: 1.3rem;
+}
+
+.my-reservations ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.my-reservations li {
+  padding: 6px 0;
+}
+
+/* The customer's reservation page */
+
+.reserve-title {
+  margin: 8px 0 20px;
+  font-size: clamp(2rem, 6vw, 2.8rem);
+}
+
+.pickup-card {
+  padding: 24px;
+  background: var(--sr-green-dark);
+  color: var(--sr-white);
+  text-align: center;
+}
+
+.pickup-card p {
+  max-width: 420px;
+  margin: 8px auto 0;
+}
+
+.pickup-label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.pickup-code {
+  display: block;
+  margin: 8px 0;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: clamp(3rem, 16vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  line-height: 1.1;
+}
+
+.pickup-address {
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+.pickup-card-waiting {
+  background: var(--sr-yellow);
+  color: var(--sr-ink);
+}
+
+.reservation-details {
+  display: grid;
+  gap: 0;
+  margin: 20px 0;
+  background: var(--sr-white);
+}
+
+.reservation-details div {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--sr-cream);
+}
+
+.reservation-details dt {
+  font-weight: 500;
+}
+
+.reservation-details dd {
+  margin: 0;
+}
+
+.reservation-actions,
+.change-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.change-prompt {
+  margin-top: 28px;
+}
+
+.change-form {
+  margin-top: 28px;
+  padding: 20px;
+  background: var(--sr-white);
+}
+
+.change-form h2 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.cancel-zone {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--sr-line);
+}
+
+.btn-danger {
+  background: var(--sr-maroon);
+  border-color: var(--sr-maroon);
+  color: var(--sr-white);
+}
+
+.btn-danger:hover {
+  background: #7E1B2A;
+}
+
+/* Home page: "Reserve your bundle" right under the hero */
+
+.reserve-feature {
+  padding: 40px var(--gutter);
+  background: var(--sr-white);
+  border-bottom: 1px solid var(--sr-line);
+}
+
+.reserve-feature-inner {
+  display: grid;
+  gap: 20px;
+  max-width: var(--content-width);
+  margin: 0 auto;
+}
+
+.reserve-feature h2 {
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+}
+
+.reserve-feature p {
+  margin: 0 0 6px;
+}
+
+.reserve-feature-next {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.reserve-feature-form {
+  display: grid;
+  gap: 10px;
+  align-content: center;
+}
+
+.reserve-feature-form select {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 1px solid var(--sr-ink);
+  background: var(--sr-white);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+}
+
+@media (min-width: 760px) {
+  .price-choices {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .price-choice {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 18px 14px;
+  }
+
+  .price-choice-on {
+    padding: 17px 13px;
+  }
+
+  .price-choice input {
+    grid-row: auto;
+    justify-self: center;
+    margin: 0 0 6px;
+  }
+
+  .reserve-feature-inner {
+    grid-template-columns: 1.3fr 1fr;
+    align-items: center;
+    gap: 40px;
+  }
+}
+
+.location-reserve {
+  margin: 10px 0 6px;
+}
+
+.pricing-inner > .btn {
+  margin-top: 20px;
 }

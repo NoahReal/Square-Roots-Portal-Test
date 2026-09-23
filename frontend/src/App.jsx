@@ -15,6 +15,8 @@ import ContactPage from './pages/site/ContactPage'
 import SignupChooserPage from './pages/site/SignupChooserPage'
 import SignupPage from './pages/site/SignupPage'
 import NotFoundPage from './pages/site/NotFoundPage'
+import ReservePage from './pages/site/ReservePage'
+import ManageReservationPage from './pages/site/ManageReservationPage'
 
 // Partner portal (everything under /portal)
 import Layout from './components/Layout'
@@ -100,6 +102,7 @@ const PUBLIC_TITLES = {
   '/become-a-community-manager': 'Become a Community Manager',
   '/events': 'Events',
   '/contact-us': 'Contact Us',
+  '/reserve': 'Reserve a Bundle',
   '/signup': 'Partner Sign-up',
   '/portal/login': 'Log in',
   '/portal/pending': 'Application received',
@@ -110,6 +113,7 @@ const PUBLIC_TITLES = {
 
 function titleFor(pathname) {
   if (pathname.startsWith('/signup/')) return 'Partner Sign-up | Square Roots'
+  if (pathname.startsWith('/reserve/manage/')) return 'Your Reservation | Square Roots'
   if (PUBLIC_TITLES[pathname]) {
     return `${PUBLIC_TITLES[pathname]} | Square Roots${pathname.startsWith('/portal') ? ' Partner Portal' : ''}`
   }
@@ -148,6 +152,8 @@ export default function App() {
           <Route path="/contact-us" element={<ContactPage />} />
           <Route path="/signup" element={<SignupChooserPage />} />
           <Route path="/signup/:roleSlug" element={<SignupPage />} />
+          <Route path="/reserve" element={<ReservePage />} />
+          <Route path="/reserve/manage/:token" element={<ManageReservationPage />} />
 
           <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
           <Route path="/portal/pending" element={<PendingPage />} />

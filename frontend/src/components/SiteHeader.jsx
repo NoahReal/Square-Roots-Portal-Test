@@ -58,6 +58,9 @@ export default function SiteHeader() {
           </div>
           <NavLink to="/events">Events</NavLink>
           <NavLink to="/contact-us">Contact Us</NavLink>
+          <Link to="/reserve" className="btn btn-yellow btn-small portal-button reserve-button">
+            Reserve a Bundle
+          </Link>
           <Link to={portalLink} className="btn btn-primary btn-small portal-button">
             Partner Portal
           </Link>

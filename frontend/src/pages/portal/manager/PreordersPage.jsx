@@ -34,6 +34,13 @@ export default function PreordersPage() {
     api(`/manager/drops/${dropId}/preorders/`).then(setPreorders)
   }, [dropId])
 
+  // Reloads the drop (for its waitlist) and its preorders after something that can change both.
+  async function reload() {
+    const [all, list] = await Promise.all([api('/manager/drops/'), api(`/manager/drops/${dropId}/preorders/`)])
+    setDrops((current) => current.map((d) => all.find((fresh) => fresh.id === d.id) ?? d))
+    setPreorders(list)
+  }
+
   const drop = drops?.find((d) => d.id === dropId)
 
   async function add(form) {
@@ -54,11 +61,15 @@ export default function PreordersPage() {
 
   async function remove(preorder) {
     await api(`/manager/preorders/${preorder.id}/`, { method: 'DELETE' })
-    setPreorders(preorders.filter((p) => p.id !== preorder.id))
+    // The freed bundles may have gone to someone on the waitlist.
+    await reload()
   }
 
   const shown = (preorders ?? [])
-    .filter((p) => p.customer_name.toLowerCase().includes(search.trim().toLowerCase()))
+    .filter((p) => {
+      const term = search.trim().toLowerCase()
+      return p.customer_name.toLowerCase().includes(term) || p.pickup_code.toLowerCase() === term
+    })
     // People still to collect go first, then alphabetical.
     .sort((a, b) => a.picked_up - b.picked_up || a.customer_name.localeCompare(b.customer_name))
   const total = (key) => (preorders ?? []).filter((p) => p[key]).length
@@ -105,6 +116,10 @@ export default function PreordersPage() {
                 <Tile label="Picked up" value={`${total('picked_up')} of ${preorders.length}`} />
               </div>
 
+              {drop && !drop.has_happened && (
+                <CheckIn dropId={dropId} onCheckedIn={(done) => setPreorders((list) => list.map((p) => (p.id === done.id ? done : p)))} />
+              )}
+
               {drop && bundles > (drop.bundles ?? 0) && drop.bundles !== null && (
                 <div className="notice notice-error">
                   You've reserved {bundles} bundles but only ordered {drop.bundles}. Order more on the Order screen if
@@ -125,8 +140,8 @@ export default function PreordersPage() {
                       <input
                         className="search-box"
                         type="search"
-                        placeholder="Find a name"
-                        aria-label="Find a customer"
+                        placeholder="Find a name or code"
+                        aria-label="Find a customer by name or pickup code"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                       />
@@ -138,8 +153,25 @@ export default function PreordersPage() {
                       <PreorderRow key={preorder.id} preorder={preorder} onUpdate={update} onRemove={remove} />
                     ))}
                   </ul>
+                  {drop?.waitlist.length > 0 && (
+                    <div className="waitlist">
+                      <h3>Waitlist</h3>
+                      <p className="muted">
+                        When a spot opens up before ordering closes, the next person gets it automatically and is emailed.
+                      </p>
+                      <ol>
+                        {drop.waitlist.map((w, index) => (
+                          <li key={index}>
+                            {w.customer_name}: {w.bundles} {w.bundles === 1 ? 'bundle' : 'bundles'}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {drop && <ReservationSettings drop={drop} reserved={bundles} onSaved={reload} />}
             </>
           )}
         </div>
@@ -260,12 +292,15 @@ function PreorderRow({ preorder, onUpdate, onRemove }) {
       <div className="preorder-who">
         <strong>{preorder.customer_name}</strong>
         <span className="preorder-badges">
+          {preorder.source === 'online' && <span className="tag">Online</span>}
           {preorder.price_tier !== 'standard' && <span className="tag">{preorder.price_tier_label}</span>}
           {preorder.delivery && <span className="tag tag-waiting">Delivery</span>}
         </span>
         {preorder.delivery && <span className="muted">Deliver to {preorder.delivery_address}</span>}
         <span className="muted">
           {preorder.bundles} {preorder.bundles === 1 ? 'bundle' : 'bundles'}
+          {' · code '}
+          <span className="code-text">{preorder.pickup_code}</span>
           {preorder.phone && (
             <>
               {' · '}
@@ -305,5 +340,107 @@ function Toggle({ on, onClick, label }) {
     <button className={'toggle' + (on ? ' toggle-on' : '')} aria-pressed={on} onClick={onClick}>
       <span aria-hidden="true">{on ? '✓' : ''}</span> {label}
     </button>
+  )
+}
+
+// At the drop: type the customer's pickup code, see what to collect, and tick them off in one tap.
+function CheckIn({ dropId, onCheckedIn }) {
+  const [code, setCode] = useState('')
+  const [found, setFound] = useState(null)
+  const [error, setError] = useState('')
+
+  async function find(event) {
+    event.preventDefault()
+    setFound(null)
+    setError('')
+    if (!code.trim()) return
+    try {
+      setFound(await api(`/manager/drops/${dropId}/pickup/${encodeURIComponent(code.trim())}/`))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function checkIn() {
+    const done = await api(`/manager/preorders/${found.id}/`, { method: 'PATCH', body: { paid: true, picked_up: true } })
+    onCheckedIn(done)
+    setFound(done)
+    setCode('')
+  }
+
+  return (
+    <div className="block block-white check-in">
+      <form className="check-in-form" onSubmit={find}>
+        <label htmlFor="pickup-code">Pickup code</label>
+        <input
+          id="pickup-code"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          maxLength={4}
+          autoComplete="off"
+          autoCapitalize="characters"
+          placeholder="K7M4"
+        />
+        <button className="btn btn-primary">Find</button>
+      </form>
+      {error && (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      )}
+      {found && (
+        <div className="check-in-result" role="status">
+          <p>
+            <strong>{found.customer_name}</strong>: {found.bundles} {found.bundles === 1 ? 'bundle' : 'bundles'}
+            {found.price_tier !== 'standard' && ` (${found.price_tier_label})`}
+          </p>
+          {found.picked_up ? (
+            <p className="check-in-done">✓ Paid and picked up</p>
+          ) : (
+            <button className="btn btn-primary btn-block" onClick={checkIn}>
+              {Number(found.amount_due) > 0 ? `Collected ${money(found.amount_due)}: mark picked up` : 'Mark picked up'}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Whether customers can reserve this location online, and how many bundles are set aside for reservations.
+function ReservationSettings({ drop, reserved, onSaved }) {
+  const [on, setOn] = useState(drop.online_reservations)
+  const [limit, setLimit] = useState(drop.reservation_limit)
+  const [saved, setSaved] = useState(false)
+  const changed = on !== drop.online_reservations || limit !== drop.reservation_limit
+
+  async function save() {
+    await api('/manager/reservations/', { method: 'PATCH', body: { online_reservations: on, reservation_limit: limit } })
+    await onSaved()
+    setSaved(true)
+  }
+
+  return (
+    <div className="block block-white reservation-settings">
+      <h2>Online reservations</h2>
+      <p className="muted">
+        {drop.online_reservations
+          ? `${reserved} of ${drop.reservation_limit} bundles set aside for reservations are taken for this drop, ${drop.online_count} of them reserved online.`
+          : 'Customers can’t reserve your location on the website right now.'}
+      </p>
+      <label className="check">
+        <input type="checkbox" checked={on} onChange={(e) => { setOn(e.target.checked); setSaved(false) }} />
+        Let customers reserve bundles on the website
+      </label>
+      <div className="field">
+        <label htmlFor="reservation-limit">Bundles to set aside for reservations at each drop</label>
+        <Stepper id="reservation-limit" value={limit} onChange={(v) => { setLimit(v); setSaved(false) }} min={0} max={300} size="small" label="bundles set aside" />
+        <p className="field-hint">Includes the ones you add here. When they’re gone, customers can join a waitlist.</p>
+      </div>
+      <button className="btn btn-primary" onClick={save} disabled={!changed}>
+        Save
+      </button>
+      {saved && <span className="saved-note"> Saved.</span>}
+    </div>
   )
 }

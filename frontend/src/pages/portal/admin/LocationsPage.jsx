@@ -104,6 +104,11 @@ function LocationSummary({ location, onEdit, onToggle }) {
       </p>
       {location.highlight && <p className="produce-notes">Highlight: {location.highlight}</p>}
       {location.delivery_partner && <p className="muted">Home delivery by {location.delivery_partner}</p>}
+      <p className="muted">
+        {location.online_reservations
+          ? `Online reservations on: ${location.reservation_limit} bundles set aside per drop`
+          : 'Online reservations off'}
+      </p>
       <div className="button-row">
         <button className="btn btn-small" onClick={onEdit}>
           Edit
@@ -125,6 +130,8 @@ function LocationForm({ initial, submitLabel, onSave, onSaved, onCancel }) {
     highlight: initial.highlight,
     delivery_partner: initial.delivery_partner,
     first_drop_pricing: initial.first_drop_pricing,
+    online_reservations: initial.online_reservations ?? true,
+    reservation_limit: initial.reservation_limit ?? 20,
   })
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
@@ -169,6 +176,16 @@ function LocationForm({ initial, submitLabel, onSave, onSaved, onCancel }) {
         <input type="checkbox" name="first_drop_pricing" checked={form.first_drop_pricing} onChange={update} />
         New location: charge the first-drop price at its first drop
       </label>
+      <label className="check">
+        <input type="checkbox" name="online_reservations" checked={form.online_reservations} onChange={update} />
+        Customers can reserve bundles here on the website
+      </label>
+      {form.online_reservations &&
+        field('reservation_limit', 'Bundles set aside for reservations at each drop', 'online and added by the Community Manager', {
+          type: 'number',
+          min: 0,
+          inputMode: 'numeric',
+        })}
       <div className="button-row">
         <button className="btn btn-primary" disabled={busy}>
           {busy ? 'Saving…' : submitLabel}

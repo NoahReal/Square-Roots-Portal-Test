@@ -631,3 +631,93 @@
     border: 1px solid #999;
   }
 }
+
+/* ---------- Preorders: pickup codes, waitlist and online reservations ---------- */
+
+.check-in {
+  margin-bottom: 24px;
+}
+
+.check-in-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 10px;
+  align-items: end;
+}
+
+.check-in-form label {
+  grid-column: 1 / -1;
+  font-weight: 500;
+}
+
+.check-in-form input {
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--sr-ink);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.check-in-form .btn {
+  min-height: 52px;
+}
+
+.check-in-result {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--sr-line);
+}
+
+.check-in-result p {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+
+.check-in-done {
+  color: var(--sr-green-dark);
+  font-weight: 700;
+}
+
+.code-text {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.waitlist {
+  margin-top: 24px;
+  padding: 16px 18px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-yellow);
+}
+
+.waitlist h3 {
+  margin: 0 0 6px;
+}
+
+.waitlist ol {
+  margin: 8px 0 0;
+  padding-left: 22px;
+}
+
+.reservation-settings {
+  margin-top: 32px;
+}
+
+.reservation-settings h2 {
+  margin-top: 0;
+}
+
+.saved-note {
+  margin-left: 10px;
+  color: var(--sr-green-dark);
+  font-weight: 500;
+}
+
+@media (min-width: 760px) {
+  .check-in {
+    max-width: 520px;
+  }
+}
