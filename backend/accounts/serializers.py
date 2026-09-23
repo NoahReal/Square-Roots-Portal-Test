@@ -10,10 +10,14 @@ class UserSerializer(serializers.ModelSerializer):
     role_label = serializers.CharField(source="get_role_display", read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
     site_name = serializers.CharField(source="site.name", default=None, read_only=True)
+    farm_name = serializers.CharField(source="farm.name", default=None, read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "role", "role_label", "status", "status_label", "site_name"]
+        fields = [
+            "id", "username", "first_name", "last_name", "role", "role_label",
+            "status", "status_label", "site_name", "farm_name",
+        ]
 
 
 # Which extra fields each kind of sign-up must fill in.

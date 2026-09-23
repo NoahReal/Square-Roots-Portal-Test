@@ -23,6 +23,8 @@ class User(AbstractUser):
     phone = models.CharField(max_length=30, blank=True)
     # The location a Community Manager runs, or a Host Site hosts.
     site = models.ForeignKey("drops.Site", null=True, blank=True, on_delete=models.SET_NULL, related_name="people")
+    # The farm a Farm-role user works for.
+    farm = models.ForeignKey("farms.Farm", null=True, blank=True, on_delete=models.SET_NULL, related_name="people")
 
     @property
     def is_approved(self):

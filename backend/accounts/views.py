@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from farms.models import Farm
 from .models import Application, User
 from .notifications import notify_person, notify_team
 from .permissions import IsAdminRole
@@ -135,8 +136,14 @@ class _ReviewApplicationView(APIView):
         application = get_object_or_404(Application.objects.select_related("user"), pk=pk)
         user = application.user
         user.status = self.new_status
-        if self.new_status == User.Status.APPROVED and application.site:
-            user.site = application.site
+        if self.new_status == User.Status.APPROVED:
+            if application.site:
+                user.site = application.site
+            if user.role == User.Role.FARM and user.farm is None:
+                user.farm = Farm.objects.get_or_create(
+                    name=application.organization or f"{user.get_full_name()}'s farm",
+                    defaults={"location": application.address},
+                )[0]
         user.save()
         application.reviewed_at = timezone.now()
         application.reviewed_by = request.user
