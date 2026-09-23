@@ -158,6 +158,23 @@ When they're gone, customers can **join a waitlist**. When someone cancels, the 
 whose request fits gets the bundle automatically and is emailed. Cancelling deletes the customer's
 details. The Reserve form has a hidden spam trap and a limit of 30 reservations an hour per visitor.
 
+Also on the Reserve page:
+- **Pay it forward**: people paying the standard price can add a $2, $5 or $10 gift for a neighbour,
+  paid at the drop. It shows on the Community Manager's list, and After Drop suggests it as donations.
+  The home page shows how many free bundles neighbours' gifts have covered this year (donations
+  logged after drops, plus gifts on reservations not logged yet, divided by the at-cost price).
+- **Where does your $10 go?**: the standard price split into what Square Roots paid farms per bundle
+  this year (farm purchases divided by bundles sold), the rest of Square Roots' share, and the
+  Community Manager's $2.50.
+- **Reserve every drop**: a standing reservation. When the team schedules a new drop at that
+  location, the customer is reserved (or waitlisted, if it's full) and emailed. Changes to a
+  reservation carry forward, and it can be stopped from any reservation page.
+
+**When plans change**, customers hear about it. If the team moves a drop's date or hours, or removes
+a drop, everyone who reserved is emailed automatically, and the Drop Cycles screen says how many were
+told. Community Managers can also **message their customers** from the Preorders screen (for example
+about rain). It tells them who has no email, with their phone number, so they can call.
+
 In the demo, the drop two weeks out has online reservations at most locations. The Halifax North End
 is full, with two people on the waitlist (log in as `cm.northend` to see it). Middle Musquodoboit has
 online reservations turned off.
@@ -344,5 +361,7 @@ example `permission_classes = [IsAdminRole]`.
 - [x] 6. Impact dashboard: lbs diverted, bundles sold, sites active, CSV export
 - [x] Extras: Community Manager preorders and after-drop reports, Host Site drop dates
 - [x] Customer reservations (stage 1): reserve online, pickup codes, waitlist, change or cancel
+- [x] Customer reservations (stage 2): pay it forward, where your money goes, reserve every drop,
+  notices when drops change
 
 Not in this prototype: real payments, and sending real SMS or email (these are stubbed).

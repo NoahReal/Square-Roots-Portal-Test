@@ -171,6 +171,9 @@ export default function PreordersPage() {
                 </div>
               </div>
 
+              {drop && !drop.has_happened && preorders.length + drop.waitlist.length > 0 && (
+                <MessageCustomers key={drop.id} drop={drop} count={preorders.length + drop.waitlist.length} />
+              )}
               {drop && <ReservationSettings drop={drop} reserved={bundles} onSaved={reload} />}
             </>
           )}
@@ -293,6 +296,8 @@ function PreorderRow({ preorder, onUpdate, onRemove }) {
         <strong>{preorder.customer_name}</strong>
         <span className="preorder-badges">
           {preorder.source === 'online' && <span className="tag">Online</span>}
+          {preorder.every_drop && <span className="tag">Every drop</span>}
+          {Number(preorder.pay_it_forward) > 0 && <span className="tag">+{money(preorder.pay_it_forward)} gift</span>}
           {preorder.price_tier !== 'standard' && <span className="tag">{preorder.price_tier_label}</span>}
           {preorder.delivery && <span className="tag tag-waiting">Delivery</span>}
         </span>
@@ -393,6 +398,7 @@ function CheckIn({ dropId, onCheckedIn }) {
           <p>
             <strong>{found.customer_name}</strong>: {found.bundles} {found.bundles === 1 ? 'bundle' : 'bundles'}
             {found.price_tier !== 'standard' && ` (${found.price_tier_label})`}
+            {Number(found.pay_it_forward) > 0 && `, with a ${money(found.pay_it_forward)} gift for a neighbour`}
           </p>
           {found.picked_up ? (
             <p className="check-in-done">✓ Paid and picked up</p>
@@ -441,6 +447,72 @@ function ReservationSettings({ drop, reserved, onSaved }) {
         Save
       </button>
       {saved && <span className="saved-note"> Saved.</span>}
+    </div>
+  )
+}
+
+// Email everyone who reserved this drop (e.g. "We're moving indoors because of rain").
+function MessageCustomers({ drop, count }) {
+  const [message, setMessage] = useState('')
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function send(event) {
+    event.preventDefault()
+    setError('')
+    setBusy(true)
+    try {
+      setResult(await api(`/manager/drops/${drop.id}/message/`, { method: 'POST', body: { message } }))
+      setMessage('')
+    } catch (err) {
+      setError([].concat(err.data?.message ?? err.message).join(' '))
+    }
+    setBusy(false)
+  }
+
+  return (
+    <div className="block block-white message-customers">
+      <h2>Message your customers</h2>
+      <p className="muted">
+        Emails everyone with a reservation or on the waitlist for this drop ({count} {count === 1 ? 'person' : 'people'}), for
+        example about weather or a change of room.
+      </p>
+      <form onSubmit={send} noValidate>
+        <div className="field">
+          <label htmlFor="customer-message">Message</label>
+          <textarea
+            id="customer-message"
+            rows={4}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Because of the rain, Saturday's drop will be inside the community centre, in the gym."
+          />
+          {error && <p className="field-error">{error}</p>}
+        </div>
+        <button className="btn btn-primary" disabled={busy || !message.trim()}>
+          {busy ? 'Sending…' : 'Send email'}
+        </button>
+      </form>
+      {result && (
+        <div className="notice notice-success message-result" role="status">
+          Sent to {result.emailed} {result.emailed === 1 ? 'person' : 'people'}.
+          {result.phone_only.length > 0 && (
+            <>
+              {' '}
+              These people have no email, so please call or text them:
+              <ul>
+                {result.phone_only.map((p, i) => (
+                  <li key={i}>
+                    {p.customer_name}
+                    {p.phone ? `: ${p.phone}` : ' (no phone number either)'}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

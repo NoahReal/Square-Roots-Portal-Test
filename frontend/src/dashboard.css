@@ -721,3 +721,20 @@
     max-width: 520px;
   }
 }
+
+.message-customers {
+  margin-top: 32px;
+}
+
+.message-customers h2 {
+  margin-top: 0;
+}
+
+.message-result {
+  margin: 16px 0 0;
+}
+
+.message-result ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}

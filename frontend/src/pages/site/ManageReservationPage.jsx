@@ -121,6 +121,12 @@ export default function ManageReservationPage() {
             <dt>Bundles</dt>
             <dd>{reservation.bundles}</dd>
           </div>
+          {Number(reservation.pay_it_forward) > 0 && (
+            <div>
+              <dt>Gift for a neighbour</dt>
+              <dd>{money(reservation.pay_it_forward)}. Thank you!</dd>
+            </div>
+          )}
           <div>
             <dt>{waiting ? 'You’ll pay if a spot opens' : 'You’ll pay at the drop'}</dt>
             <dd>
@@ -136,6 +142,8 @@ export default function ManageReservationPage() {
           </a>
           <CopyLinkButton />
         </div>
+
+        <EveryDrop reservation={reservation} onChange={setReservation} />
 
         {reservation.can_change ? (
           editing ? (
@@ -177,6 +185,44 @@ export default function ManageReservationPage() {
   )
 }
 
+// "Reserve every drop": shows whether it's on, and lets the customer start or stop it.
+function EveryDrop({ reservation, onChange }) {
+  const [busy, setBusy] = useState(false)
+  const { site } = reservation
+
+  async function set(on) {
+    setBusy(true)
+    try {
+      onChange(await api(`/reserve/${reservation.token}/every-drop/`, { method: on ? 'POST' : 'DELETE' }))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (reservation.every_drop) {
+    return (
+      <div className="every-drop-box">
+        <p>
+          <strong>You reserve every {site.name} drop.</strong> Each time a new drop is scheduled, we reserve{' '}
+          {reservation.bundles} {reservation.bundles === 1 ? 'bundle' : 'bundles'} for you and email you.
+        </p>
+        <button className="link-button" onClick={() => set(false)} disabled={busy}>
+          Stop reserving every drop
+        </button>
+      </div>
+    )
+  }
+  if (!reservation.can_change) return null
+  return (
+    <div className="every-drop-box">
+      <p>Coming every time? We can reserve for you at every {site.name} drop, and email you each time.</p>
+      <button className="btn btn-small" onClick={() => set(true)} disabled={busy}>
+        Reserve every drop for me
+      </button>
+    </div>
+  )
+}
+
 function CopyLinkButton() {
   const [copied, setCopied] = useState(false)
   async function copy() {
@@ -197,6 +243,7 @@ function CopyLinkButton() {
 function ChangeForm({ reservation, onSaved, onCancelReservation, onClose }) {
   const [bundles, setBundles] = useState(reservation.bundles)
   const [tier, setTier] = useState(reservation.price_tier)
+  const [gift, setGift] = useState(Number(reservation.pay_it_forward))
   const [delivery, setDelivery] = useState(reservation.delivery)
   const [address, setAddress] = useState(reservation.delivery_address)
   const [contact, setContact] = useState({ email: reservation.email, phone: reservation.phone })
@@ -209,7 +256,7 @@ function ChangeForm({ reservation, onSaved, onCancelReservation, onClose }) {
     try {
       const updated = await api(`/reserve/${reservation.token}/`, {
         method: 'PATCH',
-        body: { bundles, price_tier: tier, delivery, delivery_address: address, ...contact },
+        body: { bundles, price_tier: tier, pay_it_forward: tier === 'standard' ? gift : 0, delivery, delivery_address: address, ...contact },
       })
       onSaved(updated)
     } catch (err) {
@@ -245,6 +292,17 @@ function ChangeForm({ reservation, onSaved, onCancelReservation, onClose }) {
           </label>
         ))}
       </fieldset>
+      {tier === 'standard' && (
+        <fieldset className="choice-group choice-row">
+          <legend>Gift for a neighbour</legend>
+          {[0, 2, 5, 10].map((amount) => (
+            <label key={amount} className={'choice' + (gift === amount ? ' choice-on' : '')}>
+              <input type="radio" name="change-gift" checked={gift === amount} onChange={() => setGift(amount)} />
+              {amount === 0 ? 'None' : `+$${amount}`}
+            </label>
+          ))}
+        </fieldset>
+      )}
       {reservation.site.delivery_partner && (
         <div className="field">
           <label className="check">
@@ -287,7 +345,9 @@ function ChangeForm({ reservation, onSaved, onCancelReservation, onClose }) {
             <p>
               {waiting
                 ? 'Leave the waitlist? Your details will be deleted.'
-                : 'Cancel your reservation? Your bundle goes to the next person waiting, and your details are deleted.'}
+                : reservation.every_drop
+                  ? 'Cancel this drop’s reservation? Your bundle goes to the next person waiting. You’ll still be reserved at future drops.'
+                  : 'Cancel your reservation? Your bundle goes to the next person waiting, and your details are deleted.'}
             </p>
             <div className="change-buttons">
               <button type="button" className="btn btn-danger" onClick={onCancelReservation}>

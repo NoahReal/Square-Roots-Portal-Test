@@ -136,7 +136,9 @@ function CycleRow({ cycle, open, onToggle, onChanged }) {
 function CycleDetail({ cycleId, onChanged }) {
   const [detail, setDetail] = useState(null)
   const [editingId, setEditingId] = useState(null)
+  const [removingId, setRemovingId] = useState(null)
   const [error, setError] = useState('')
+  const [told, setTold] = useState('')
 
   useEffect(() => {
     api(`/admin/cycles/${cycleId}/`).then(setDetail)
@@ -144,9 +146,15 @@ function CycleDetail({ cycleId, onChanged }) {
 
   async function run(request) {
     setError('')
+    setTold('')
     try {
       const updated = await request()
       if (updated) setDetail(updated)
+      // Customers who reserved are emailed automatically when a drop moves or is cancelled.
+      if (updated?.customers_emailed) {
+        const n = updated.customers_emailed
+        setTold(`We emailed ${n} ${n === 1 ? 'customer' : 'customers'} who reserved, so they know about the change.`)
+      }
       setEditingId(null)
       onChanged()
     } catch (err) {
@@ -159,6 +167,11 @@ function CycleDetail({ cycleId, onChanged }) {
   return (
     <div className="cycle-detail">
       {error && <div className="notice notice-error">{error}</div>}
+      {told && (
+        <div className="notice notice-success" role="status">
+          {told}
+        </div>
+      )}
       <table className="data-table">
         <thead>
           <tr>
@@ -194,14 +207,26 @@ function CycleDetail({ cycleId, onChanged }) {
                   <button className="link-button" onClick={() => setEditingId(drop.id)}>
                     Change
                   </button>
-                  {drop.bundles === null && (
-                    <button
-                      className="link-button"
-                      onClick={() => run(() => api(`/admin/site-drops/${drop.id}/`, { method: 'DELETE' }))}
-                    >
-                      Remove
-                    </button>
-                  )}
+                  {drop.bundles === null &&
+                    (removingId === drop.id ? (
+                      <span className="remove-confirm">
+                        {drop.preorder_bundles > 0 &&
+                          `${drop.preorder_bundles} bundles are reserved here. Those customers will be emailed that it's cancelled. `}
+                        <button
+                          className="link-button"
+                          onClick={() => run(() => api(`/admin/site-drops/${drop.id}/`, { method: 'DELETE' }))}
+                        >
+                          Yes, remove
+                        </button>
+                        <button className="link-button" onClick={() => setRemovingId(null)}>
+                          Keep
+                        </button>
+                      </span>
+                    ) : (
+                      <button className="link-button" onClick={() => setRemovingId(drop.id)}>
+                        Remove
+                      </button>
+                    ))}
                 </td>
               </tr>
             ),

@@ -6,6 +6,7 @@ import {
   PRICE_CHOICES, forgetDetails, forgetReservation, myReservationTokens, rememberReservation, saveDetails, savedDetails,
 } from '../../reservations'
 import Stepper from '../../components/Stepper'
+import MoneyBreakdown from '../../components/MoneyBreakdown'
 
 // The public Reserve page: pick a location, how many bundles and a price, and reserve.
 // No account needed. A returning customer's details are filled in, so it's one tap.
@@ -22,6 +23,8 @@ export default function ReservePage() {
   const [bundles, setBundles] = useState(1)
   const [tier, setTier] = useState(saved?.tier ?? 'standard')
   const [delivery, setDelivery] = useState(false)
+  const [gift, setGift] = useState(0)
+  const [everyDrop, setEveryDrop] = useState(false)
   const [form, setForm] = useState({
     customer_name: saved?.customer_name ?? '',
     email: saved?.email ?? '',
@@ -46,7 +49,8 @@ export default function ReservePage() {
   const priceOf = (choice) => (choice.priceKey ? Number(options.prices[choice.priceKey]) : 0)
   const total =
     options && bundles * priceOf(PRICE_CHOICES.find((c) => c.value === tier)) +
-      (delivery && site?.delivery_partner ? Number(options.prices.delivery_fee) : 0)
+      (delivery && site?.delivery_partner ? Number(options.prices.delivery_fee) : 0) +
+      gift
 
   function chooseSite(id) {
     setSiteId(id)
@@ -84,6 +88,8 @@ export default function ReservePage() {
           bundles,
           price_tier: tier,
           delivery: delivery && Boolean(site.delivery_partner),
+          pay_it_forward: gift,
+          every_drop: everyDrop,
           join_waitlist: full,
         },
       })
@@ -181,7 +187,10 @@ export default function ReservePage() {
                             name="price-tier"
                             value={choice.value}
                             checked={tier === choice.value}
-                            onChange={() => setTier(choice.value)}
+                            onChange={() => {
+                              setTier(choice.value)
+                              if (choice.value !== 'standard') setGift(0)
+                            }}
                           />
                           <span className="price-choice-amount">{choice.priceKey ? money(options.prices[choice.priceKey]) : '$0'}</span>
                           <span className="price-choice-title">{choice.title}</span>
@@ -190,6 +199,8 @@ export default function ReservePage() {
                       ))}
                     </fieldset>
                     <p className="muted reserve-hint">Every choice is private and gets the same bundle.</p>
+                    {tier === 'standard' && <GiftChoice gift={gift} onChange={setGift} money={options.money} />}
+                    <MoneyBreakdown money={options.money} />
                   </Step>
 
                   {site.delivery_partner && (
@@ -252,6 +263,16 @@ export default function ReservePage() {
                       <label htmlFor="reserve-website">Website</label>
                       <input id="reserve-website" tabIndex={-1} autoComplete="off" value={form.website} onChange={update('website')} />
                     </div>
+                    <label className="check check-with-hint">
+                      <input type="checkbox" checked={everyDrop} onChange={(e) => setEveryDrop(e.target.checked)} />
+                      <span>
+                        Reserve this for me at every {site.name} drop
+                        <span className="field-hint">
+                          {' '}
+                          We’ll reserve for you each time a new drop is scheduled and email you. Stop any time.
+                        </span>
+                      </span>
+                    </label>
                     <label className="check">
                       <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
                       Remember my details on this device
@@ -278,6 +299,30 @@ export default function ReservePage() {
         </div>
       </section>
     </>
+  )
+}
+
+const GIFTS = [0, 2, 5, 10]
+
+// "Pay it forward": an optional gift on top of the $10, paid at the drop, to help cover free bundles.
+function GiftChoice({ gift, onChange, money }) {
+  return (
+    <fieldset className="choice-group choice-row gift-choice">
+      <legend>
+        Add a gift for a neighbour? <span className="field-hint">(optional, paid at the drop)</span>
+      </legend>
+      {GIFTS.map((amount) => (
+        <label key={amount} className={'choice' + (gift === amount ? ' choice-on' : '')}>
+          <input type="radio" name="gift" checked={gift === amount} onChange={() => onChange(amount)} />
+          {amount === 0 ? 'No thanks' : `+$${amount}`}
+        </label>
+      ))}
+      {money.free_bundles_covered > 0 && (
+        <p className="muted reserve-hint">
+          This year, neighbours’ gifts have covered {money.free_bundles_covered.toLocaleString('en-CA')} free bundles.
+        </p>
+      )}
+    </fieldset>
   )
 }
 

@@ -1615,3 +1615,91 @@
 .pricing-inner > .btn {
   margin-top: 20px;
 }
+
+/* Pay it forward, and where the money goes */
+
+.gift-choice {
+  margin: 20px 0 0;
+}
+
+.check.check-with-hint {
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.check.check-with-hint input {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.check-with-hint .field-hint {
+  display: block;
+}
+
+.money-breakdown {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--sr-white);
+  border: 1px solid var(--sr-line);
+}
+
+.money-breakdown summary {
+  min-height: 32px;
+  font-weight: 500;
+  color: var(--sr-green-dark);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.money-breakdown ul {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.money-breakdown li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.money-breakdown li strong {
+  flex: 0 0 auto;
+}
+
+.money-bar {
+  display: flex;
+  gap: 2px;
+  height: 20px;
+  margin-top: 14px;
+}
+
+.money-swatch {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
+.money-bar-farms {
+  background: var(--sr-green-dark);
+}
+
+.money-bar-sr {
+  background: var(--sr-green-light);
+}
+
+.money-bar-manager {
+  background: var(--sr-yellow);
+}
+
+.every-drop-box {
+  margin: 20px 0;
+  padding: 16px 18px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-yellow);
+}
+
+.every-drop-box p {
+  margin: 0 0 8px;
+}

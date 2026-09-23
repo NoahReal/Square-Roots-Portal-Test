@@ -237,6 +237,16 @@ function ReportForm({ drop, onSaved, onCancel }) {
             value={donations}
             onChange={(e) => setDonations(e.target.value)}
           />
+          {Number(drop.pay_it_forward) > 0 && (
+            <p className="field-hint">
+              Pay-it-forward gifts from paid reservations: {money(drop.pay_it_forward)}.{' '}
+              {Number(donations) === 0 && (
+                <button type="button" className="link-button" onClick={() => setDonations(String(Number(drop.pay_it_forward)))}>
+                  Use this amount
+                </button>
+              )}
+            </p>
+          )}
           {errors.donations && <p className="field-error">{[].concat(errors.donations).join(' ')}</p>}
         </div>
       </div>

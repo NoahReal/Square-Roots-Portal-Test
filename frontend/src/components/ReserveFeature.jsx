@@ -40,6 +40,8 @@ export default function ReserveFeature() {
           {options && (
             <p className="muted">
               Pay what works for you: {money(options.prices.standard)}, {money(options.prices.at_cost)} or free.
+              {options.money.free_bundles_covered > 0 &&
+                ` This year, neighbours’ gifts have covered ${options.money.free_bundles_covered.toLocaleString('en-CA')} free bundles.`}
             </p>
           )}
         </div>
