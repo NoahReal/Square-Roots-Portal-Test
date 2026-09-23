@@ -1,6 +1,7 @@
 """API for the Admin role: drop cycles, the orders overview for a cycle, and impact numbers."""
 
 import csv
+from datetime import time, timedelta
 
 from django.db import transaction
 from django.db.models import Sum
@@ -12,10 +13,12 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.models import Application, User
+from accounts.notifications import notify_person
 from accounts.permissions import IsAdminRole
 from farms.models import FarmOrder, FarmOrderLine
 from farms.serializers import FarmOrderSerializer
-from .models import BUNDLE_POUNDS, DropCycle, Site, SiteDrop
+from .models import BUNDLE_POUNDS, BundleOrder, DropCycle, Site, SiteDrop
 
 
 def cycle_name(drop_date):
@@ -48,6 +51,8 @@ class NewCycleSerializer(serializers.Serializer):
     drop_date = serializers.DateField(error_messages={"invalid": "Choose a drop date from the calendar."})
     order_cutoff = serializers.DateTimeField(error_messages={"invalid": "Choose when ordering closes."})
     sites = serializers.PrimaryKeyRelatedField(queryset=Site.objects.filter(is_active=True), many=True)
+    starts_at = serializers.TimeField(default=time(11), error_messages={"invalid": "Choose a start time."})
+    ends_at = serializers.TimeField(default=time(13), error_messages={"invalid": "Choose an end time."})
 
     def validate_drop_date(self, value):
         if value < timezone.localdate():
@@ -63,13 +68,15 @@ class NewCycleSerializer(serializers.Serializer):
         cutoff_day = timezone.localtime(data["order_cutoff"]).date()
         if cutoff_day >= data["drop_date"]:
             raise serializers.ValidationError({"order_cutoff": "Ordering should close before the drop date."})
+        if data["ends_at"] <= data["starts_at"]:
+            raise serializers.ValidationError({"ends_at": "The drop should end after it starts."})
         if DropCycle.objects.filter(drop_date=data["drop_date"]).exists():
             raise serializers.ValidationError({"drop_date": "There's already a drop cycle on this date."})
         return data
 
 
 class CycleListView(APIView):
-    """Lists drop cycles with how many sites have ordered, or creates a new cycle for chosen sites (Admins)."""
+    """Lists drop cycles with how many sites have ordered, or creates a new cycle for chosen sites and hours (Admins)."""
 
     permission_classes = [IsAdminRole]
 
@@ -85,7 +92,10 @@ class CycleListView(APIView):
             name=cycle_name(data["drop_date"]), drop_date=data["drop_date"], order_cutoff=data["order_cutoff"]
         )
         for site in data["sites"]:
-            SiteDrop.objects.create(cycle=cycle, site=site, drop_date=cycle.drop_date, order_cutoff=cycle.order_cutoff)
+            SiteDrop.objects.create(
+                cycle=cycle, site=site, drop_date=cycle.drop_date, order_cutoff=cycle.order_cutoff,
+                starts_at=data["starts_at"], ends_at=data["ends_at"],
+            )
         return Response(cycle_summary(cycles_with_details().get(pk=cycle.pk)), status=201)
 
 
@@ -99,7 +109,10 @@ def site_drop_row(site_drop):
         "site_name": site_drop.site.name,
         "drop_date": site_drop.drop_date,
         "order_cutoff": site_drop.order_cutoff,
+        "starts_at": site_drop.starts_at,
+        "ends_at": site_drop.ends_at,
         "ordering_open": site_drop.ordering_open,
+        "has_happened": site_drop.has_happened,
         "bundles": order.bundles if order else None,
         "preorder_bundles": sum(p.bundles for p in preorders),
         "report": {"bundles_sold": report.bundles_sold, "bundles_left_over": report.bundles_left_over} if report else None,
@@ -174,7 +187,7 @@ class CycleSiteView(APIView):
 
 
 class SiteDropDetailView(APIView):
-    """Changes one site's drop date or cutoff, or removes the site from the cycle if it hasn't ordered (Admins)."""
+    """Changes one site's drop date, hours or cutoff, or removes the site from the cycle if it hasn't ordered (Admins)."""
 
     permission_classes = [IsAdminRole]
 
@@ -184,8 +197,13 @@ class SiteDropDetailView(APIView):
             site_drop.drop_date = serializers.DateField().to_internal_value(request.data["drop_date"])
         if "order_cutoff" in request.data:
             site_drop.order_cutoff = serializers.DateTimeField().to_internal_value(request.data["order_cutoff"])
+        for field in ("starts_at", "ends_at"):
+            if field in request.data:
+                setattr(site_drop, field, serializers.TimeField().to_internal_value(request.data[field]))
         if timezone.localtime(site_drop.order_cutoff).date() >= site_drop.drop_date:
             raise ValidationError({"order_cutoff": "Ordering should close before the drop date."})
+        if site_drop.ends_at <= site_drop.starts_at:
+            raise ValidationError({"ends_at": "The drop should end after it starts."})
         site_drop.save()
         return CycleDetailView().get(request, site_drop.cycle_id)
 
@@ -196,6 +214,153 @@ class SiteDropDetailView(APIView):
         cycle_id = site_drop.cycle_id
         site_drop.delete()
         return CycleDetailView().get(request, cycle_id)
+
+
+class SiteOrderView(APIView):
+    """Sets a site's bundle order for them, even after the cutoff. Their Community Manager is emailed (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def put(self, request, pk):
+        site_drop = get_object_or_404(SiteDrop.objects.select_related("site", "cycle"), pk=pk)
+        try:
+            bundles = int(request.data.get("bundles"))
+        except (TypeError, ValueError):
+            raise ValidationError({"bundles": "Enter a number of bundles."})
+        if not 0 <= bundles <= 300:
+            raise ValidationError({"bundles": "Enter a number from 0 to 300."})
+        BundleOrder.objects.update_or_create(site_drop=site_drop, defaults={"bundles": bundles, "updated_by": request.user})
+        for manager in site_drop.site.people.filter(role=User.Role.COMMUNITY_MANAGER, status=User.Status.APPROVED):
+            notify_person(
+                manager,
+                f"Your order for the {site_drop.cycle.name} was changed",
+                f"The Square Roots team set your order for {site_drop.site.name} to {bundles} bundles.",
+            )
+        return CycleDetailView().get(request, site_drop.cycle_id)
+
+
+# ---------- Locations ----------
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    people = serializers.SerializerMethodField()
+    drops_this_year = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Site
+        fields = [
+            "id", "name", "address", "instagram_url", "facebook_url", "highlight", "is_active", "sort_order",
+            "people", "drops_this_year",
+        ]
+        extra_kwargs = {
+            "name": {"error_messages": {"blank": "Give the location a name, like “Lower Sackville”."}},
+            "address": {"error_messages": {"blank": "Add the street address."}},
+            "instagram_url": {"error_messages": {"invalid": "Paste the full Instagram link, starting with https://"}},
+            "facebook_url": {"error_messages": {"invalid": "Paste the full Facebook link, starting with https://"}},
+        }
+
+    def get_people(self, site):
+        return [
+            {"name": p.get_full_name(), "role_label": p.get_role_display()}
+            for p in site.people.all()
+            if p.status == User.Status.APPROVED
+        ]
+
+    def get_drops_this_year(self, site):
+        return site.drops.filter(drop_date__year=timezone.localdate().year).count()
+
+
+class LocationListView(APIView):
+    """Lists every location (including switched-off ones) with who runs it, or adds a new location (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        sites = Site.objects.prefetch_related("people")
+        return Response(LocationSerializer(sites, many=True).data)
+
+    def post(self, request):
+        serializer = LocationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        last = Site.objects.order_by("-sort_order").first()
+        serializer.save(sort_order=(last.sort_order + 1) if last else 0)
+        return Response(serializer.data, status=201)
+
+
+class LocationDetailView(APIView):
+    """Changes a location's details, or switches it off so it no longer appears on the website (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def patch(self, request, pk):
+        site = get_object_or_404(Site, pk=pk)
+        serializer = LocationSerializer(site, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+# ---------- Admin home dashboard ----------
+
+
+class DashboardView(APIView):
+    """Everything waiting for the team, for the admin home page (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        now = timezone.now()
+        today = timezone.localdate()
+
+        next_cycle = cycles_with_details().filter(drop_date__gte=today).order_by("drop_date").first()
+        open_cycle = cycles_with_details().filter(order_cutoff__gt=now).order_by("order_cutoff").first()
+
+        def buying(cycle):
+            if cycle is None:
+                return None
+            summary = cycle_summary(cycle)
+            bought = FarmOrderLine.objects.filter(order__drop_cycle=cycle).exclude(
+                order__status=FarmOrder.Status.CANT_FILL
+            ).aggregate(total=Sum("pounds"))["total"] or 0
+            return {**summary, "pounds_needed": summary["bundles_ordered"] * BUNDLE_POUNDS, "pounds_bought": bought}
+
+        not_ordered = []
+        if open_cycle:
+            not_ordered = [
+                drop.site.name
+                for drop in open_cycle.site_drops.select_related("site")
+                if not hasattr(drop, "order")
+            ]
+
+        reports_missing = [
+            {"site": d.site.name, "cycle_name": d.cycle.name, "drop_date": d.drop_date}
+            for d in SiteDrop.objects.filter(drop_date__lt=today, drop_date__gte=today - timedelta(weeks=6), order__isnull=False, report__isnull=True)
+            .select_related("site", "cycle")
+            .order_by("-drop_date")
+        ]
+
+        waiting_farms = [
+            {"id": o.id, "farm": o.farm.name, "cycle_id": o.drop_cycle_id, "cycle_name": o.drop_cycle.name, "pickup_at": o.pickup_at}
+            for o in FarmOrder.objects.filter(status=FarmOrder.Status.WAITING, pickup_at__gt=now).select_related("farm", "drop_cycle")
+        ]
+        unpaid = FarmOrder.objects.filter(
+            status=FarmOrder.Status.CONFIRMED, payment=FarmOrder.Payment.NOT_PAID, pickup_at__lte=now
+        ).select_related("farm", "drop_cycle").prefetch_related("lines")
+
+        return Response(
+            {
+                "signups_waiting": Application.objects.filter(user__status=User.Status.PENDING).count(),
+                "next_cycle": buying(next_cycle),
+                "open_cycle": buying(open_cycle) if open_cycle and open_cycle != next_cycle else None,
+                "sites_not_ordered": not_ordered,
+                "reports_missing": reports_missing,
+                "farms_waiting": waiting_farms,
+                "unpaid_farm_orders": [
+                    {"id": o.id, "farm": o.farm.name, "cycle_id": o.drop_cycle_id, "cycle_name": o.drop_cycle.name, "total": o.total}
+                    for o in unpaid
+                ],
+            }
+        )
 
 
 # ---------- Impact ----------

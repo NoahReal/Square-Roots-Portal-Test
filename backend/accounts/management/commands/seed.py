@@ -19,7 +19,7 @@ from django.utils import timezone
 from accounts.models import Application, User
 from drops.models import BundleOrder, DropCycle, DropReport, Preorder, Site, SiteDrop
 from farms.models import Farm, FarmOrder, FarmOrderLine, ProduceListing
-from website.models import ContactMessage
+from website.models import ContactMessage, Event
 
 DEMO_PASSWORD = "squareroots"
 
@@ -170,6 +170,7 @@ class Command(BaseCommand):
         users = self.create_users(sites, farms)
         counts = self.create_drop_history(sites, farms, users)
         self.create_signups(sites)
+        self.create_events()
 
         self.stdout.write(self.style.SUCCESS(
             f"Created {len(SITES)} locations, {len(FARMS)} farms, {counts['cycles']} drop cycles "
@@ -190,6 +191,7 @@ class Command(BaseCommand):
         DropCycle.objects.all().delete()  # also deletes site drops, orders, preorders and reports
         Site.objects.all().delete()
         ContactMessage.objects.all().delete()
+        Event.objects.all().delete()
 
     def create_sites(self):
         sites = {}
@@ -240,6 +242,21 @@ class Command(BaseCommand):
             if "site" in details:
                 details["site"] = sites[details["site"]]
             Application.objects.create(user=user, **details)
+
+    def create_events(self):
+        """The event from squarerootssmu.ca/events. The live page doesn't give a year; 2024 is a guess
+        from the site's "© 2024" footer, so check it with the Square Roots team."""
+        Event.objects.create(
+            title="Saint Mary's - NSCC Ivany",
+            starts_on=date(2024, 8, 31),
+            ends_on=date(2024, 9, 1),
+            time_text="12 to 4 p.m.",
+            location="Gorsebrook Park (facing Inglis), Halifax",
+            description=(
+                "We gave away free produce at Gorsebrook Park, and free bundles with the help of "
+                "Enactus NSCC Ivany at their campus."
+            ),
+        )
 
     # ---------- A year of drops ----------
 

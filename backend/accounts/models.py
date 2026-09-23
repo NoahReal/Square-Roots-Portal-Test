@@ -56,6 +56,7 @@ class Application(models.Model):
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
+    decline_reason = models.CharField(max_length=500, blank=True)
 
     class Meta:
         ordering = ["-submitted_at"]

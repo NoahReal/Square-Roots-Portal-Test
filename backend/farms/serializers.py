@@ -6,9 +6,11 @@ from .models import FarmOrder, FarmOrderLine, ProduceListing
 
 
 class ProduceListingSerializer(serializers.ModelSerializer):
+    expired = serializers.SerializerMethodField()
+
     class Meta:
         model = ProduceListing
-        fields = ["id", "produce", "pounds", "price_per_pound", "available_until", "notes", "updated_at"]
+        fields = ["id", "produce", "pounds", "price_per_pound", "available_until", "notes", "updated_at", "expired"]
         read_only_fields = ["updated_at"]
         # Plain-language messages instead of DRF's defaults ("A valid integer is required.")
         extra_kwargs = {
@@ -17,6 +19,9 @@ class ProduceListingSerializer(serializers.ModelSerializer):
             "price_per_pound": {"error_messages": {"invalid": "Enter a price, like 0.35."}},
             "available_until": {"error_messages": {"invalid": "Choose a date from the calendar."}},
         }
+
+    def get_expired(self, listing):
+        return bool(listing.available_until and listing.available_until < date.today())
 
     def to_internal_value(self, data):
         # A blank "available until" box means no end date.

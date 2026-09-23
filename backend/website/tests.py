@@ -1,9 +1,14 @@
+from datetime import timedelta
+
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
+from accounts.models import User
+
 from drops.models import Site
-from .models import ContactMessage
+from .models import ContactMessage, Event
 
 
 class PublicApiTests(TestCase):
@@ -26,3 +31,29 @@ class PublicApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("email", response.data)
         self.assertIn("message", response.data)
+
+
+class EventTests(TestCase):
+    def setUp(self):
+        today = timezone.localdate()
+        self.admin = APIClient()
+        self.admin.force_authenticate(User.objects.create_user("admin.test", role=User.Role.ADMIN))
+        Event.objects.create(title="Past giveaway", starts_on=today - timedelta(days=30), description="Done")
+        Event.objects.create(title="Harvest market", starts_on=today + timedelta(days=10), description="Soon")
+        Event.objects.create(title="Hidden", starts_on=today + timedelta(days=5), description="Draft", is_published=False)
+
+    def test_public_sees_published_upcoming_and_past(self):
+        data = APIClient().get("/api/events/").data
+        self.assertEqual([e["title"] for e in data["upcoming"]], ["Harvest market"])
+        self.assertEqual([e["title"] for e in data["past"]], ["Past giveaway"])
+
+    def test_admin_adds_and_checks_dates(self):
+        ok = self.admin.post("/api/admin/events/", {"title": "Pop-up", "starts_on": "2030-05-01", "description": "Free produce"}, format="json")
+        self.assertEqual(ok.status_code, 201)
+        bad = self.admin.post(
+            "/api/admin/events/",
+            {"title": "Oops", "starts_on": "2030-05-02", "ends_on": "2030-05-01", "description": "x"},
+            format="json",
+        )
+        self.assertIn("ends_on", bad.data)
+        self.assertEqual(APIClient().post("/api/admin/events/", {}, format="json").status_code, 401)

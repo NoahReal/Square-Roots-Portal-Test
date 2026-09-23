@@ -25,6 +25,7 @@ class ProduceListView(generics.ListCreateAPIView):
     serializer_class = ProduceListingSerializer
 
     def get_queryset(self):
+        # Includes produce past its "available until" date, so the farm can extend it or mark it sold out.
         return ProduceListing.objects.filter(farm=farm_for(self.request), is_active=True)
 
     def perform_create(self, serializer):

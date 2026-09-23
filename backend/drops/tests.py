@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 
+from django.core import mail
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -247,3 +248,62 @@ class HostAndPublicTests(DropTestCase):
         make_drop(self.site, 10)
         data = APIClient().get("/api/drop-dates/").data
         self.assertEqual(data["next"], timezone.localdate() + timedelta(days=10))
+
+
+class AdminDeadEndTests(DropTestCase):
+    def test_new_cycle_can_set_drop_hours(self):
+        drop_date = timezone.localdate() + timedelta(days=14)
+        form = {
+            "drop_date": drop_date.isoformat(),
+            "order_cutoff": timezone.make_aware(datetime.combine(drop_date - timedelta(days=4), time(17))).isoformat(),
+            "sites": [self.site.id],
+            "starts_at": "10:00",
+            "ends_at": "12:30",
+        }
+        self.team.post("/api/admin/cycles/", form, format="json")
+        drop = SiteDrop.objects.get()
+        self.assertEqual((drop.starts_at, drop.ends_at), (time(10), time(12, 30)))
+        backwards = {**form, "drop_date": (drop_date + timedelta(days=1)).isoformat(), "starts_at": "13:00", "ends_at": "11:00"}
+        self.assertIn("ends_at", self.team.post("/api/admin/cycles/", backwards, format="json").data)
+
+    def test_change_one_sites_hours(self):
+        drop = make_drop(self.site, 10)
+        self.team.patch(f"/api/admin/site-drops/{drop.id}/", {"starts_at": "13:00", "ends_at": "15:00"}, format="json")
+        drop.refresh_from_db()
+        self.assertEqual(drop.starts_at, time(13))
+
+    def test_admin_can_change_a_sites_order_after_the_cutoff(self):
+        self.manager.email = "jordan@example.com"
+        self.manager.save()
+        drop = make_drop(self.site, 3, cutoff_days_from_now=-1)
+        detail = self.team.put(f"/api/admin/site-drops/{drop.id}/order/", {"bundles": 18}, format="json").data
+        self.assertEqual(detail["bundles_ordered"], 18)
+        self.assertIn("18 bundles", mail.outbox[-1].body)
+
+    def test_locations_can_be_added_edited_and_switched_off(self):
+        created = self.team.post("/api/admin/locations/", {"name": "Bedford", "address": "1 Library Rd"}, format="json")
+        self.assertEqual(created.status_code, 201)
+        self.team.patch(f"/api/admin/locations/{created.data['id']}/", {"is_active": False}, format="json")
+        public = [s["name"] for s in APIClient().get("/api/sites/").data]
+        self.assertNotIn("Bedford", public)
+        self.assertIn("Bedford", [s["name"] for s in self.team.get("/api/admin/locations/").data])
+        bad = self.team.post("/api/admin/locations/", {"name": "", "address": "", "instagram_url": "insta"}, format="json")
+        self.assertEqual(set(bad.data), {"name", "address", "instagram_url"})
+
+    def test_public_locations_show_their_next_drop(self):
+        make_drop(self.site, -3)
+        upcoming = make_drop(self.site, 5)
+        dartmouth = next(s for s in APIClient().get("/api/sites/").data if s["name"] == "Dartmouth")
+        self.assertEqual(dartmouth["next_drop"]["drop_date"], upcoming.drop_date)
+        windsor = next(s for s in APIClient().get("/api/sites/").data if s["name"] == "Windsor")
+        self.assertIsNone(windsor["next_drop"])
+
+    def test_dashboard_lists_what_needs_doing(self):
+        past = make_drop(self.site, -3)
+        BundleOrder.objects.create(site_drop=past, bundles=20)  # ordered, but no report yet
+        make_drop(self.other_site, 10)  # open, not ordered
+        data = self.team.get("/api/admin/dashboard/").data
+        self.assertEqual(data["reports_missing"][0]["site"], "Dartmouth")
+        self.assertEqual(data["sites_not_ordered"], ["Windsor"])
+        self.assertEqual(data["next_cycle"]["site_count"], 1)
+        self.assertEqual(self.cm.get("/api/admin/dashboard/").status_code, 403)

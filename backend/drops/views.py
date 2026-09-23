@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db.models import Prefetch
 from django.utils import timezone
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
@@ -12,11 +13,14 @@ from .serializers import SiteSerializer
 
 
 class SiteListView(ListAPIView):
-    """Lists every active Square Roots location. Public: used by the Drop Dates & Locations page and sign-up forms."""
+    """Lists every active Square Roots location with its next drop. Public: used by the Locations page and sign-up forms."""
 
     permission_classes = [AllowAny]
     serializer_class = SiteSerializer
-    queryset = Site.objects.filter(is_active=True)
+
+    def get_queryset(self):
+        upcoming = SiteDrop.objects.filter(drop_date__gte=timezone.localdate()).order_by("drop_date")
+        return Site.objects.filter(is_active=True).prefetch_related(Prefetch("drops", queryset=upcoming))
 
 
 class DropDatesView(APIView):

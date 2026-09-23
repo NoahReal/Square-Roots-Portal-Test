@@ -15,9 +15,21 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "id", "username", "first_name", "last_name", "role", "role_label",
+            "id", "username", "first_name", "last_name", "email", "phone", "role", "role_label",
             "status", "status_label", "site_name", "farm_name",
         ]
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    """The details people can change about themselves on the My Account page."""
+
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "email", "phone"]
+        extra_kwargs = {
+            "first_name": {"required": True, "allow_blank": False, "error_messages": {"blank": "Please add your first name."}},
+            "email": {"required": True, "allow_blank": False, "error_messages": {"blank": "Please add your email, so we can reach you."}},
+        }
 
 
 # Which extra fields each kind of sign-up must fill in.
@@ -115,4 +127,5 @@ class ApplicationSerializer(serializers.ModelSerializer):
         fields = [
             "id", "user", "email", "phone", "organization", "site_name", "planned_location", "address",
             "produce_types", "pounds_available", "message", "submitted_at", "reviewed_at", "reviewed_by_name",
+            "decline_reason",
         ]

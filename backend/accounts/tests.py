@@ -55,11 +55,12 @@ class LoginTests(TestCase):
         self.assertEqual(self.login("cm.test", "pw").status_code, 400)
 
     def test_me_requires_login_and_logout_ends_the_session(self):
-        self.assertEqual(self.client.get(ME).status_code, 403)
+        # 401 (not 403) tells the app the login has ended, so it can show the login page.
+        self.assertEqual(self.client.get(ME).status_code, 401)
         self.login("cm.test", "pw")
         self.assertEqual(self.client.get(ME).data["username"], "cm.test")
         self.client.post(LOGOUT)
-        self.assertEqual(self.client.get(ME).status_code, 403)
+        self.assertEqual(self.client.get(ME).status_code, 401)
 
     def test_login_without_csrf_token_is_blocked(self):
         strict_client = APIClient(enforce_csrf_checks=True)

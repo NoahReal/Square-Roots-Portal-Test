@@ -19,6 +19,10 @@ urlpatterns = [
     path("admin/cycles/<int:pk>/", views_admin.CycleDetailView.as_view()),
     path("admin/cycles/<int:pk>/sites/", views_admin.CycleSiteView.as_view()),
     path("admin/site-drops/<int:pk>/", views_admin.SiteDropDetailView.as_view()),
+    path("admin/site-drops/<int:pk>/order/", views_admin.SiteOrderView.as_view()),
+    path("admin/locations/", views_admin.LocationListView.as_view()),
+    path("admin/locations/<int:pk>/", views_admin.LocationDetailView.as_view()),
+    path("admin/dashboard/", views_admin.DashboardView.as_view()),
     path("admin/impact/", views_admin.ImpactView.as_view()),
     path("admin/impact.csv", views_admin.ImpactCsvView.as_view()),
 ]

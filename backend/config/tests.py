@@ -13,7 +13,7 @@ class ApiCatalogTests(TestCase):
         return client
 
     def test_only_admins_can_see_it(self):
-        self.assertEqual(APIClient().get(CATALOG).status_code, 403)
+        self.assertEqual(APIClient().get(CATALOG).status_code, 401)  # not logged in
         self.assertEqual(self.client_for(User.Role.COMMUNITY_MANAGER).get(CATALOG).status_code, 403)
         self.assertEqual(self.client_for(User.Role.ADMIN).get(CATALOG).status_code, 200)
 

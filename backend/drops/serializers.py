@@ -1,12 +1,24 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import BUNDLE_POUNDS, DropReport, Preorder, Site, SiteDrop
 
 
 class SiteSerializer(serializers.ModelSerializer):
+    """A location, as the public website shows it, with its next drop."""
+
+    next_drop = serializers.SerializerMethodField()
+
     class Meta:
         model = Site
-        fields = ["id", "name", "address", "instagram_url", "facebook_url", "highlight"]
+        fields = ["id", "name", "address", "instagram_url", "facebook_url", "highlight", "next_drop"]
+
+    def get_next_drop(self, site):
+        today = timezone.localdate()
+        drop = next((d for d in site.drops.all() if d.drop_date >= today), None)
+        if drop is None:
+            return None
+        return {"drop_date": drop.drop_date, "starts_at": drop.starts_at, "ends_at": drop.ends_at}
 
 
 class PreorderSerializer(serializers.ModelSerializer):

@@ -13,5 +13,6 @@ urlpatterns = [
     path("admin/produce/", views_admin.AllProduceView.as_view()),
     path("admin/cycles/<int:pk>/buy/", views_admin.BuyProduceView.as_view()),
     path("admin/farm-order-lines/<int:pk>/", views_admin.RemoveOrderLineView.as_view()),
+    path("admin/farm-orders/<int:pk>/", views_admin.FarmOrderDetailView.as_view()),
     path("admin/farm-orders/<int:pk>/paid/", views_admin.MarkPaidView.as_view()),
 ]

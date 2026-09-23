@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -87,7 +88,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
 }
+
+# Demo mode shows the demo accounts on the login page and labels the made-up data.
+# Turn it off for real use:  DEMO_MODE=0 python manage.py runserver
+DEMO_MODE = os.environ.get('DEMO_MODE', '1') == '1'
 
 
 # Database

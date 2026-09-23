@@ -140,3 +140,36 @@ class FarmApprovalTests(TestCase):
         applicant.refresh_from_db()
         self.assertEqual(applicant.farm.name, "North Mountain Market Garden")
         self.assertEqual(applicant.farm.location, "Kings County")
+
+
+class ExpiryAndPickupTests(FarmTestCase):
+    def setUp(self):
+        super().setUp()
+        self.admin = client_for(User.objects.create_user("admin.test", role=User.Role.ADMIN))
+        self.fresh = ProduceListing.objects.create(farm=self.farm, produce="Carrots", pounds=100, price_per_pound=1)
+        self.old = ProduceListing.objects.create(
+            farm=self.farm, produce="Old beets", pounds=100, price_per_pound=1, available_until=date.today() - timedelta(days=1)
+        )
+
+    def test_expired_produce_is_hidden_from_admins_and_cannot_be_bought(self):
+        names = [l["produce"] for farm in self.admin.get("/api/admin/produce/").data for l in farm["listings"]]
+        self.assertEqual(names, ["Carrots"])
+        response = self.admin.post(f"/api/admin/cycles/{self.cycle.id}/buy/", {"listing": self.old.id, "pounds": 10}, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_farm_still_sees_its_expired_produce_marked_as_expired(self):
+        listed = {l["produce"]: l["expired"] for l in self.client.get(PRODUCE).data}
+        self.assertEqual(listed, {"Carrots": False, "Old beets": True})
+
+    def test_admin_can_change_pickup_and_the_farm_is_told(self):
+        self.user.email = "ruth@example.com"
+        self.user.save()
+        order = self.make_order()
+        new_time = (timezone.now() + timedelta(days=5)).replace(microsecond=0)
+        response = self.admin.patch(
+            f"/api/admin/farm-orders/{order.id}/", {"pickup_at": new_time.isoformat(), "pickup_notes": "Side door"}, format="json"
+        )
+        self.assertEqual(response.data["pickup_notes"], "Side door")
+        self.assertIn("Pickup changed", mail.outbox[-1].subject)
+        past = self.admin.patch(f"/api/admin/farm-orders/{order.id}/", {"pickup_at": "2020-01-01T09:00:00Z"}, format="json")
+        self.assertIn("pickup_at", past.data)

@@ -3,8 +3,10 @@
 from datetime import datetime, time, timedelta
 
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,12 +29,17 @@ def tell_farm(order, subject, body):
 
 
 class AllProduceView(APIView):
-    """Lists the produce every farm has posted, grouped by farm (Admins)."""
+    """Lists the produce every farm has posted and still has, grouped by farm (Admins). Expired produce is left out."""
 
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        listings = ProduceListing.objects.filter(is_active=True).select_related("farm").order_by("farm__name", "produce")
+        listings = (
+            ProduceListing.objects.filter(is_active=True)
+            .filter(Q(available_until__isnull=True) | Q(available_until__gte=timezone.localdate()))
+            .select_related("farm")
+            .order_by("farm__name", "produce")
+        )
         farms = {}
         for listing in listings:
             farm = farms.setdefault(
@@ -58,6 +65,9 @@ class BuyProduceView(APIView):
             pounds = int(request.data.get("pounds"))
         except (TypeError, ValueError):
             raise ValidationError({"pounds": "Enter a number of pounds."})
+        if listing.available_until and listing.available_until < timezone.localdate():
+            until = listing.available_until
+            raise ValidationError({"detail": f"{listing.produce} was only available until {until:%B} {until.day}."})
         if not 1 <= pounds <= listing.pounds:
             raise ValidationError({"pounds": f"Enter between 1 and {listing.pounds} lbs."})
 
@@ -122,4 +132,29 @@ class MarkPaidView(APIView):
             raise ValidationError({"detail": "Only orders the farm confirmed can be paid."})
         order.payment = FarmOrder.Payment.PAID
         order.save()
+        return Response({**FarmOrderSerializer(order).data, "farm_name": order.farm.name})
+
+
+class FarmOrderDetailView(APIView):
+    """Changes when and how a farm order is picked up. The farm is emailed about the change (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def patch(self, request, pk):
+        order = get_object_or_404(FarmOrder.objects.select_related("farm", "drop_cycle"), pk=pk)
+        if order.pickup_at <= timezone.now():
+            raise ValidationError({"detail": "This order has already been picked up."})
+        if "pickup_at" in request.data:
+            try:
+                order.pickup_at = serializers.DateTimeField().to_internal_value(request.data["pickup_at"])
+            except serializers.ValidationError:
+                raise ValidationError({"pickup_at": "Choose a pickup day and time."})
+            if order.pickup_at <= timezone.now():
+                raise ValidationError({"pickup_at": "Choose a time that hasn't passed yet."})
+        if "pickup_notes" in request.data:
+            order.pickup_notes = (request.data["pickup_notes"] or "").strip()[:300]
+        order.save()
+        local = timezone.localtime(order.pickup_at)
+        when = f"{local:%A, %B} {local.day} at {local:%I:%M %p}".replace(" 0", " ")
+        tell_farm(order, f"Pickup changed for the {order.drop_cycle.name}", f"New pickup time: {when}.\n{order.pickup_notes}")
         return Response({**FarmOrderSerializer(order).data, "farm_name": order.farm.name})
