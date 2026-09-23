@@ -2,7 +2,7 @@
 
 Each customer gets emails in the language they used on the Reserve page. To change the wording,
 edit the TEXT below (keep the {names} in curly brackets). To add a language, add it to
-Language in models.py, then add its words here and in frontend/src/i18n.js.
+Language in models.py, then add its words here and in frontend/src/i18n.jsx.
 
 The French was written for this prototype; have a French speaker check it before real use.
 """

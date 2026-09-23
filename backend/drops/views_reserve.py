@@ -194,6 +194,7 @@ def reservation_json(reservation):
         "language": reservation.language,
         "bundle": bundle_contents(site_drop.cycle),
         "amount_due": f"{amount_due(reservation):.2f}",
+        "delivery_fee": f"{OperatingSettings.current().delivery_fee:.2f}",
         "picked_up": False if waiting else reservation.picked_up,
         # Until ordering closes, customers can change or cancel (and add bundles, if any are left).
         "can_change": site_drop.ordering_open and not getattr(reservation, "picked_up", False),

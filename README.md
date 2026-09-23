@@ -23,7 +23,7 @@ licensed for Wix sites only.
 | **Admin** (Enactus team) | Run drop cycles, turn orders into farm purchase lists, track impact |
 | **Community Manager** | Order bundles before the cutoff, track preorders, log sales after a drop |
 | **Farm** | Post available produce, confirm orders, see pickups and payment status |
-| **Host Site** | See upcoming drop dates at their location (read-only) |
+| **Host Site** | See upcoming drop dates at their location, and reserve bundles for people they support |
 | **Customers** (no account) | Reserve bundles on the website, then change or cancel them from a private link |
 
 ## Setup
@@ -170,6 +170,23 @@ Also on the Reserve page:
   location, the customer is reserved (or waitlisted, if it's full) and emailed. Changes to a
   reservation carry forward, and it can be stopped from any reservation page.
 
+**What's in the bundle** (`/whats-in-the-bundle`, linked from the home page and every reservation):
+once the team sends the farm orders for a drop, customers see each item, the farm it came from, and
+roughly how many pounds are in a bundle, with storage tips and simple ideas. The tips are in
+`frontend/src/recipes.js`, matched to the farm's produce names ("Yukon Gold potatoes" finds potatoes).
+
+**Host sites can reserve for people they support** (Host Site menu, **Reserve for Someone**): a first
+name or initials is enough, with no email or phone. Each person gets a pickup code, and the list can
+be printed to hand out. These reservations count towards the location's set-aside bundles and show
+on the Community Manager's list tagged **Host site**.
+
+**French**: the Reserve page, reservation page, What's in the Bundle and the home page section have
+an English / Français switch, and customers get their emails in the language they reserved in. The
+words are in `frontend/src/i18n.jsx` and `backend/drops/customer_emails.py`; both say how to add
+another language. The French was written for this prototype, so have a French speaker check it
+before real use. The rest of the website is English, like the live site. Messages from the server
+(like "you already have a reservation") are still English.
+
 **When plans change**, customers hear about it. If the team moves a drop's date or hours, or removes
 a drop, everyone who reserved is emailed automatically, and the Drop Cycles screen says how many were
 told. Community Managers can also **message their customers** from the Preorders screen (for example
@@ -250,6 +267,8 @@ If a login times out, the portal takes the person back to the login page and say
 **Host Site** (`host.dartmouth`)
 - **Drop Dates**: the next drop at your space, expected bundles, later and recent drops, and who
   to contact.
+- **Reserve for Someone**: reserve bundles for people your organization supports, with pickup codes
+  to hand out and a printable list.
 
 The public **Drop Dates & Locations** page shows this year's real drop dates from the drop cycles,
 and each location's next drop date and hours. The **Events** page shows events the team adds; the
@@ -312,7 +331,8 @@ backend/                 Django + Django REST Framework
     views.py             public drop dates and locations, Host Site drops
     views_manager.py     Community Manager: order, preorders, pickup codes, reservation settings, after-drop report
     views_reserve.py     public: customers reserving, changing and cancelling bundles
-    reservations.py      what's left to reserve, the waitlist, and customer emails
+    reservations.py      what's left to reserve, the waitlist, every-drop reservations, bundle contents
+    customer_emails.py   the emails customers get, in English and French
     views_admin.py       Admin: drop cycles, orders overview, locations, dashboard, impact and CSV
     views_operations.py  Admin: settings, money (statements and payments), packing and delivery sheet
     money.py             how a drop's money is worked out (sliding scale, $2.50 split, first drop)
@@ -363,5 +383,7 @@ example `permission_classes = [IsAdminRole]`.
 - [x] Customer reservations (stage 1): reserve online, pickup codes, waitlist, change or cancel
 - [x] Customer reservations (stage 2): pay it forward, where your money goes, reserve every drop,
   notices when drops change
+- [x] Customer reservations (stage 3): what's in the bundle with recipes, host sites reserving for
+  people, French
 
 Not in this prototype: real payments, and sending real SMS or email (these are stubbed).

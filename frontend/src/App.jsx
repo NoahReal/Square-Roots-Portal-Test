@@ -17,6 +17,8 @@ import SignupPage from './pages/site/SignupPage'
 import NotFoundPage from './pages/site/NotFoundPage'
 import ReservePage from './pages/site/ReservePage'
 import ManageReservationPage from './pages/site/ManageReservationPage'
+import BundlePage from './pages/site/BundlePage'
+import HostReservePage from './pages/portal/host/HostReservePage'
 
 // Partner portal (everything under /portal)
 import Layout from './components/Layout'
@@ -78,6 +80,7 @@ const PAGES = {
   '/portal/farm/produce': ProducePage,
   '/portal/farm/pickups': PickupsPage,
   '/portal/host': HostDropsPage,
+  '/portal/host/reserve': HostReservePage,
 }
 
 function pageFor(item) {
@@ -103,6 +106,7 @@ const PUBLIC_TITLES = {
   '/events': 'Events',
   '/contact-us': 'Contact Us',
   '/reserve': 'Reserve a Bundle',
+  '/whats-in-the-bundle': 'What’s in the Bundle',
   '/signup': 'Partner Sign-up',
   '/portal/login': 'Log in',
   '/portal/pending': 'Application received',
@@ -154,6 +158,7 @@ export default function App() {
           <Route path="/signup/:roleSlug" element={<SignupPage />} />
           <Route path="/reserve" element={<ReservePage />} />
           <Route path="/reserve/manage/:token" element={<ManageReservationPage />} />
+          <Route path="/whats-in-the-bundle" element={<BundlePage />} />
 
           <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
           <Route path="/portal/pending" element={<PendingPage />} />

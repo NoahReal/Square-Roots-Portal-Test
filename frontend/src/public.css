@@ -1703,3 +1703,114 @@
 .every-drop-box p {
   margin: 0 0 8px;
 }
+
+/* Language switch on the customer pages */
+
+.language-switch {
+  display: inline-flex;
+  margin-top: 16px;
+  border: 1px solid var(--sr-ink);
+}
+
+.language-switch button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.language-switch button.on {
+  background: var(--sr-ink);
+  color: var(--sr-white);
+}
+
+.reserve-container > .language-switch {
+  margin: 0 0 16px;
+}
+
+.reserve-feature-links {
+  margin-top: 10px !important;
+}
+
+/* What's in the bundle */
+
+.bundle-section {
+  margin: 28px 0;
+  padding: 18px 20px;
+  background: var(--sr-white);
+}
+
+.bundle-section h2,
+.bundle-date,
+.bundle-more-title {
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+}
+
+.bundle-more-title {
+  margin-top: 40px;
+}
+
+.bundle-items {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.bundle-items > li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--sr-cream);
+}
+
+.reserve-container > .bundle-items > li {
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-green-dark);
+}
+
+.bundle-item-name,
+.bundle-item-farms {
+  margin: 0;
+}
+
+.bundle-item-name {
+  font-size: 1.1rem;
+}
+
+.recipe-tips {
+  margin-top: 10px;
+}
+
+.recipe-tips p {
+  margin: 0 0 4px;
+}
+
+.recipe-tips ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.bundle-reserve {
+  margin-top: 16px;
+}
+
+.recipe-list {
+  display: grid;
+  gap: 8px;
+}
+
+.recipe-card {
+  padding: 12px 16px;
+  background: var(--sr-white);
+  border: 1px solid var(--sr-line);
+}
+
+.recipe-card summary {
+  min-height: 32px;
+  font-weight: 500;
+  cursor: pointer;
+}

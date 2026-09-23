@@ -38,16 +38,17 @@ export function forgetReservation(token) {
 
 // The sliding scale, as customers see it. All three look the same on purpose: choosing
 // the free or at-cost price should feel as ordinary as choosing the standard one.
+// The words are in i18n.jsx (priceStandardTitle and so on).
 export const PRICE_CHOICES = [
-  { value: 'standard', priceKey: 'standard', title: 'Pay it forward', text: 'Covers your bundle and helps cover one for a neighbour.' },
-  { value: 'at_cost', priceKey: 'at_cost', title: 'At cost', text: 'Covers what your bundle costs.' },
-  { value: 'free', priceKey: null, title: 'Free', text: 'If money is too tight right now.' },
+  { value: 'standard', priceKey: 'standard', words: 'priceStandard' },
+  { value: 'at_cost', priceKey: 'at_cost', words: 'priceAtCost' },
+  { value: 'free', priceKey: null, words: 'priceFree' },
 ]
 
 // A calendar file for the drop, so it can be added to a phone's calendar. Times are Halifax time.
-export function calendarFile({ drop, site, bundles, pickup_code: code }) {
+export function calendarFile({ drop, site, bundles, pickup_code: code }, t) {
   const day = drop.drop_date.replaceAll('-', '')
-  const clock = (t) => t.replaceAll(':', '').slice(0, 6)
+  const clock = (time) => time.replaceAll(':', '').slice(0, 6)
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -56,9 +57,9 @@ export function calendarFile({ drop, site, bundles, pickup_code: code }) {
     `UID:${day}-${site.id}-${code ?? 'waitlist'}@squareroots`,
     `DTSTART;TZID=America/Halifax:${day}T${clock(drop.starts_at)}`,
     `DTEND;TZID=America/Halifax:${day}T${clock(drop.ends_at)}`,
-    `SUMMARY:Pick up ${bundles} Square Roots ${bundles === 1 ? 'bundle' : 'bundles'}`,
+    `SUMMARY:${t.calendarTitle(t.bundles(bundles))}`,
     `LOCATION:${site.address}\\, ${site.name}\\, Nova Scotia`,
-    `DESCRIPTION:${code ? `Your pickup code is ${code}.` : ''}`,
+    `DESCRIPTION:${code ? t.calendarCode(code) : ''}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ]

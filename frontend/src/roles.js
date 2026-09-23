@@ -50,7 +50,10 @@ export const ROLES = {
     label: 'Host Site',
     home: '/portal/host',
     welcome: 'See when Square Roots drops are happening at your location.',
-    nav: [{ to: '/portal/host', label: 'Drop Dates' }],
+    nav: [
+      { to: '/portal/host', label: 'Drop Dates' },
+      { to: '/portal/host/reserve', label: 'Reserve for Someone' },
+    ],
   },
 }
 

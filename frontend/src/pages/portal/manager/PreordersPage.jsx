@@ -296,6 +296,8 @@ function PreorderRow({ preorder, onUpdate, onRemove }) {
         <strong>{preorder.customer_name}</strong>
         <span className="preorder-badges">
           {preorder.source === 'online' && <span className="tag">Online</span>}
+          {preorder.source === 'host' && <span className="tag">Host site</span>}
+          {preorder.language === 'fr' && <span className="tag">Français</span>}
           {preorder.every_drop && <span className="tag">Every drop</span>}
           {Number(preorder.pay_it_forward) > 0 && <span className="tag">+{money(preorder.pay_it_forward)} gift</span>}
           {preorder.price_tier !== 'standard' && <span className="tag">{preorder.price_tier_label}</span>}
