@@ -75,6 +75,11 @@ class ProduceTests(FarmTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(set(response.data), {"produce", "pounds", "price_per_pound", "available_until"})
 
+    def test_error_messages_are_plain_language(self):
+        response = self.post(pounds="lots", price_per_pound="cheap")
+        self.assertEqual(response.data["pounds"], ["Enter a whole number of pounds, like 250."])
+        self.assertEqual(response.data["price_per_pound"], ["Enter a price, like 0.35."])
+
     def test_other_roles_cannot_use_farm_screens(self):
         cm = client_for(User.objects.create_user("cm.test", role=User.Role.COMMUNITY_MANAGER))
         self.assertEqual(cm.get(PRODUCE).status_code, 403)

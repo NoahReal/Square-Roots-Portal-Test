@@ -70,7 +70,7 @@ LISTINGS = {
 # (farm, cycle, status, paid?, farm note, [(produce, lbs, $/lb), ...])
 FARM_ORDERS = [
     ("Gaspereau Valley Growers", -2, FarmOrder.Status.CONFIRMED, True, "", [("Carrots", 350, "0.35"), ("Yukon Gold potatoes", 500, "0.30")]),
-    ("Gaspereau Valley Growers", -1, FarmOrder.Status.CONFIRMED, True, "", [("Apples (Cortland seconds)", 300, "0.55"), ("Yellow onions", 200, "0.40")]),
+    ("Gaspereau Valley Growers", -1, FarmOrder.Status.CONFIRMED, False, "", [("Apples (Cortland seconds)", 300, "0.55"), ("Yellow onions", 200, "0.40")]),
     ("Gaspereau Valley Growers", 0, FarmOrder.Status.CONFIRMED, False, "", [("Carrots", 400, "0.35"), ("Beets", 150, "0.45")]),
     ("Gaspereau Valley Growers", 1, FarmOrder.Status.WAITING, False, "", [("Carrots", 300, "0.35"), ("Yukon Gold potatoes", 400, "0.30"), ("Butternut squash", 200, "0.50")]),
     ("Canard Creek Farm", -2, FarmOrder.Status.CANT_FILL, False, "Hail damage last week, nothing to spare. Sorry!", [("Green cabbage", 250, "0.40")]),

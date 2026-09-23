@@ -69,15 +69,17 @@ Every demo password is **`squareroots`**. The portal login page lists these acco
 | `cm.dartmouth` | Jordan MacLeod | Community Manager (Dartmouth) |
 | `cm.northend` | Aisha Rahman | Community Manager (Halifax - North End) |
 | `cm.sackville` | Liam Boudreau | Community Manager (Lower Sackville) |
-| `farm.gaspereau` | Ruth Eisenhauer | Farm |
-| `farm.canard` | Tom Van Dyk | Farm |
+| `farm.gaspereau` | Ruth Eisenhauer | Farm (Gaspereau Valley Growers) |
+| `farm.canard` | Tom Van Dyk | Farm (Canard Creek Farm) |
 | `host.fairview` | Grace Oickle | Host Site (Fairview / Clayton Park) |
 | `apply.bedford` | Priya Nair | Community Manager, **waiting for approval** |
 | `apply.northmountain` | Sam Porter | Farm, **waiting for approval** |
 | `apply.windsorhall` | Dana Whynot | Host Site, **waiting for approval** |
 
-The demo data also includes the 11 real Square Roots locations. Run `python manage.py seed` again at
-any time to reset everything.
+The demo data also includes the 11 real Square Roots locations, two fictional Annapolis Valley
+farms with produce posted, four drop cycles (two past, two coming up, always relative to today's
+date) and farm orders in every state: waiting for the farm, confirmed, can't fill, paid and not paid.
+Run `python manage.py seed` again at any time to reset everything.
 
 The `admin` account can also open Django's built-in data admin at http://127.0.0.1:8000/django-admin/.
 
@@ -94,6 +96,23 @@ Host Site, or they can use the forms on the For Farms and Become a Community Man
 
 Emails (to the team about new sign-ups and contact messages, and to the applicant when they're
 approved or declined) aren't really sent. They're printed in the terminal running `runserver`.
+
+## Farm screens
+
+Log in as `farm.gaspereau` or `farm.canard`.
+
+- **Produce** (`/portal/farm/produce`): post seconds produce with pounds, price per pound, an
+  optional "available until" date and notes. Edit it, or mark it sold out. Sold-out produce is
+  hidden from the farm but kept for the team's records.
+- **Pickups** (`/portal/farm/pickups`): Square Roots' orders from the farm, grouped into "Needs your
+  answer", "Upcoming pickups" and "Past pickups", each with its pickup time, produce, totals and
+  payment status. The farm can **confirm** an order, or say it **can't fill** it with a note, and
+  the team is emailed either way. Totals at the top show orders to answer, the next pickup, and
+  money owed for past pickups.
+
+Until the admin Orders screen is built (step 4), the team creates farm orders and marks them paid
+in Django's admin at `/django-admin/` (Farms → Farm orders). The payment date is filled in
+automatically.
 
 ## Testing logins and the API
 
@@ -142,7 +161,8 @@ backend/                 Django + Django REST Framework
     permissions.py       IsAdminRole, IsCommunityManager, IsFarm, IsHostSite (approved accounts only)
     notifications.py     "emails" (printed to the terminal for now)
     management/commands/seed.py   demo data
-  drops/                 Square Roots locations (drop cycles will go here next)
+  drops/                 Square Roots locations and drop cycles
+  farms/                 farms, produce listings, farm orders and their pickups
   website/               Contact Us messages
 frontend/                React (Vite), plain CSS
   public/photos, logos   images for the public website
@@ -151,6 +171,8 @@ frontend/                React (Vite), plain CSS
     theme.css            colours and fonts from squarerootssmu.ca. Change them here
     styles.css           portal layout, buttons, forms, blocks
     public.css           public website pages
+    farm.css             farm Produce and Pickups screens
+    format.js            money, pounds and date formatting
     App.jsx              which page shows at which web address
     roles.js             each role's portal menu. Add a screen here to put it in the menu
     signupRoles.js       the three kinds of partner sign-up
@@ -159,7 +181,7 @@ frontend/                React (Vite), plain CSS
     demoAccounts.js      demo usernames (must match the backend seed command)
     components/          site header/footer, portal layout, sign-up form, shared sections
     pages/site/          the public website, one file per page
-    pages/portal/        the partner portal, one file per screen
+    pages/portal/        the partner portal, one file per screen (farm screens in pages/portal/farm/)
 ```
 
 ### How login works
@@ -176,6 +198,7 @@ example `permission_classes = [IsAdminRole]`.
 - [ ] 3. Community Manager ordering: submit and edit bundle counts before the cutoff
 - [ ] 4. Admin aggregation: total orders per cycle, turned into a purchase list per farm
 - [ ] 5. Farm availability: farms post produce and quantities, admin allocates
+  (farm side done: Produce and Pickups screens; admin allocation still to build)
 - [ ] 6. Impact dashboard: lbs diverted, bundles sold, sites active, CSV export
 
 Not in this prototype: real payments, sending real SMS or email (these are stubbed), and public

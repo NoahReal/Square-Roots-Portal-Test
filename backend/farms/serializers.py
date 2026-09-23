@@ -10,6 +10,13 @@ class ProduceListingSerializer(serializers.ModelSerializer):
         model = ProduceListing
         fields = ["id", "produce", "pounds", "price_per_pound", "available_until", "notes", "updated_at"]
         read_only_fields = ["updated_at"]
+        # Plain-language messages instead of DRF's defaults ("A valid integer is required.")
+        extra_kwargs = {
+            "produce": {"error_messages": {"blank": "Please say what the produce is."}},
+            "pounds": {"error_messages": {"invalid": "Enter a whole number of pounds, like 250."}},
+            "price_per_pound": {"error_messages": {"invalid": "Enter a price, like 0.35."}},
+            "available_until": {"error_messages": {"invalid": "Choose a date from the calendar."}},
+        }
 
     def to_internal_value(self, data):
         # A blank "available until" box means no end date.
