@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'accounts',
+    'drops',
+    'website',
 ]
 
 MIDDLEWARE = [
@@ -137,6 +139,10 @@ STATIC_URL = 'static/'
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+
+# Stubbed email: the console backend below prints emails in the runserver terminal.
+DEFAULT_FROM_EMAIL = 'Square Roots <squareroots@enactussmu.ca>'
+TEAM_EMAIL = 'squareroots@enactussmu.ca'  # where sign-up and contact notifications go
 
 MAILERS = {
     'default': {

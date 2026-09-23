@@ -70,7 +70,7 @@ class LoginTests(TestCase):
 class DemoAccountTests(TestCase):
     def test_every_seeded_demo_account_can_log_in_with_the_right_role(self):
         call_command("seed", stdout=StringIO())
-        for username, _first, _last, role in DEMO_USERS:
+        for username, _first, _last, role, _site in DEMO_USERS:
             client = APIClient()
             response = client.post(LOGIN, {"username": username, "password": DEMO_PASSWORD}, format="json")
             self.assertEqual(response.status_code, 200, username)

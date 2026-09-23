@@ -1,13 +1,17 @@
 from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import User
+from .models import Application, User
+from .notifications import notify_person, notify_team
 from .permissions import IsAdminRole
-from .serializers import UserSerializer
+from .serializers import ApplicationSerializer, SignupSerializer, UserSerializer
 
 
 def check_credentials(request, username, password):
@@ -88,4 +92,77 @@ class CheckLoginView(APIView):
                 "reason": reason,
                 "user": UserSerializer(user).data if user else None,
             }
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class SignupView(APIView):
+    """Signs up a Community Manager, Farm or Host Site from the website. The account waits for admin approval."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = SignupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        login(request, user)
+        notify_team(
+            subject=f"New {user.get_role_display()} sign-up: {user.get_full_name()}",
+            body="Someone has signed up on the website. Review it on the Sign-ups screen in the partner portal.",
+        )
+        return Response(UserSerializer(user).data, status=201)
+
+
+class ApplicationListView(ListAPIView):
+    """Lists website sign-ups for admins. Add ?status=pending, approved or declined to filter."""
+
+    permission_classes = [IsAdminRole]
+    serializer_class = ApplicationSerializer
+
+    def get_queryset(self):
+        applications = Application.objects.select_related("user", "site", "reviewed_by")
+        status = self.request.query_params.get("status")
+        if status:
+            applications = applications.filter(user__status=status)
+        return applications
+
+
+class _ReviewApplicationView(APIView):
+    permission_classes = [IsAdminRole]
+    new_status = None
+
+    def post(self, request, pk):
+        application = get_object_or_404(Application.objects.select_related("user"), pk=pk)
+        user = application.user
+        user.status = self.new_status
+        if self.new_status == User.Status.APPROVED and application.site:
+            user.site = application.site
+        user.save()
+        application.reviewed_at = timezone.now()
+        application.reviewed_by = request.user
+        application.save()
+        self.tell_applicant(user)
+        return Response(ApplicationSerializer(application).data)
+
+
+class ApproveApplicationView(_ReviewApplicationView):
+    """Approves a sign-up, so that person can start using the portal."""
+
+    new_status = User.Status.APPROVED
+
+    def tell_applicant(self, user):
+        notify_person(user, "You're approved!", "Welcome to Square Roots. You can now log in to the partner portal.")
+
+
+class DeclineApplicationView(_ReviewApplicationView):
+    """Declines a sign-up. The person can still log in, but only sees a message to contact the team."""
+
+    new_status = User.Status.DECLINED
+
+    def tell_applicant(self, user):
+        notify_person(
+            user,
+            "About your application",
+            "Thanks for your interest in Square Roots. We can't approve your application right now. "
+            "Reply to this email if you have any questions.",
         )
