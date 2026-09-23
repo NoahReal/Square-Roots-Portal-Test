@@ -2,7 +2,12 @@
 .venv/
 __pycache__/
 *.pyc
-backend/db.sqlite3
+
+# Databases (demo and real) never go in git
+*.sqlite3
+
+# Real Square Roots data: names, emails and phone numbers. Never commit this.
+real-data/
 
 # Node
 node_modules/

@@ -1,0 +1,2 @@
+drop_date,location,bundles_ordered,bundles_standard,bundles_at_cost,bundles_free,bundles_left_over,leftovers_went_to,donations,payment_received_on,notes
+EXAMPLE 2026-09-12,Dartmouth,28,20,5,2,1,donated,15.00,2026-09-18,Ran out of carrots by noon

@@ -115,17 +115,33 @@ class ChangePasswordView(APIView):
         return Response({"ok": True})
 
 
-def send_password_reset(request, user):
-    """Emails a one-time link for choosing a new password. The link stops working once it's used."""
+def password_link(user, site_url):
+    """A one-time link for choosing a new password. It stops working once it's used."""
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
+    return f"{site_url.rstrip('/')}/portal/reset-password?uid={uid}&token={token}"
+
+
+def send_password_reset(request, user):
+    """Emails a link for choosing a new password."""
     # The link goes to the React page on whatever address the portal is being used at.
-    link = f"{request.scheme}://{request.get_host()}/portal/reset-password?uid={uid}&token={token}"
+    link = password_link(user, f"{request.scheme}://{request.get_host()}")
     notify_person(
         user,
         "Choose a new password",
         f"Hi {user.first_name},\n\nUse this link to choose a new password for the Square Roots partner portal:\n{link}\n\n"
         f"Your username is {user.username}. If you didn't ask for this, you can ignore this email.",
+    )
+
+
+def send_invitation(user, site_url):
+    """Welcomes someone added by the team (e.g. by the import command) and asks them to choose a password."""
+    notify_person(
+        user,
+        "Welcome to the Square Roots partner portal",
+        f"Hi {user.first_name},\n\nThe Square Roots team has set up your partner portal account.\n"
+        f"Your username is {user.username}. Choose your password here:\n{password_link(user, site_url)}\n\n"
+        "Then log in at the same address. Questions? Reply to this email.",
     )
 
 

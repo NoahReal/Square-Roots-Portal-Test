@@ -102,6 +102,29 @@ Nothing is really emailed. Every email (sign-ups, approvals, password reset link
 pickup changes) is printed as readable text in the terminal running `runserver`, so you can copy
 links from it. To send real email, change `MAILERS` in `backend/config/settings.py`.
 
+## Loading Square Roots' real data
+
+The demo data is made up. To load Square Roots' real locations, farms, people, drop dates and
+history, fill in the spreadsheets in [`data-templates/`](data-templates/) (its README is written for
+the Square Roots team), then:
+
+```bash
+cd backend
+source .venv/bin/activate
+export DATABASE_PATH=real.sqlite3 DEMO_MODE=0   # real data gets its own database, demo mode off
+python manage.py migrate
+python manage.py import_data ../real-data            # checks everything, changes nothing
+python manage.py import_data ../real-data --apply    # loads it; all or nothing
+```
+
+- Put the filled-in files in `real-data/`. **Git ignores that folder and every `.sqlite3` file**, so
+  names, emails and phone numbers can't end up on GitHub.
+- Problems come back in plain language with the file and row, e.g. *people.csv, row 4: There's no
+  location called "Lower Sackvile". Did you mean "Lower Sackville"?*
+- Imported people get no password. Add `--invite` to email each one a link to choose their own.
+- Running it again with updated files updates what's there instead of making duplicates.
+- `locations.csv` is already filled in from squarerootssmu.ca.
+
 ## Signing up
 
 Partners can sign up on the website at `/signup`. From there they choose Community Manager, Farm or
@@ -253,6 +276,8 @@ backend/                 Django + Django REST Framework
     views.py             Farm: produce and pickups
     views_admin.py       Admin: all produce, buying from farms, marking orders paid
   website/               Contact Us messages and public events
+  data_import/           loads real data from CSV files (python manage.py import_data)
+data-templates/          spreadsheets (and a guide) for Square Roots to fill in with real data
 frontend/                React (Vite), plain CSS
   public/photos, logos   images for the public website
   public/square-roots-logo.png
