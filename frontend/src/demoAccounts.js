@@ -9,7 +9,7 @@ export const DEMO_ACCOUNTS = [
   { username: 'cm.sackville', who: 'Liam Boudreau', role: 'Community Manager' },
   { username: 'farm.gaspereau', who: 'Ruth Eisenhauer', role: 'Farm' },
   { username: 'farm.canard', who: 'Tom Van Dyk', role: 'Farm' },
-  { username: 'host.fairview', who: 'Grace Oickle', role: 'Host Site' },
+  { username: 'host.dartmouth', who: 'Grace Oickle', role: 'Host Site' },
 ]
 
 // People who signed up on the website and are waiting for an admin to approve them.

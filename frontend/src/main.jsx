@@ -7,6 +7,7 @@ import './theme.css'
 import './styles.css'
 import './public.css'
 import './farm.css'
+import './screens.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

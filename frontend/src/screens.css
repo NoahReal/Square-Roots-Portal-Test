@@ -1,0 +1,917 @@
+/*
+  Community Manager, Host Site and Admin screens (Order, Preorders, After Drop, Drop Dates,
+  Drop Cycles, Orders, Farms, Impact). Same building blocks as the rest of the portal.
+*/
+
+/* ---------- Shared bits ---------- */
+
+.link-button {
+  min-height: 40px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  color: var(--sr-green-dark);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 20px;
+}
+
+.toolbar .field {
+  margin-bottom: 0;
+}
+
+.cycle-picker select,
+.drop-picker select {
+  min-width: 260px;
+}
+
+.drop-picker {
+  max-width: 420px;
+}
+
+.drop-picker .muted {
+  margin: 8px 0 0;
+}
+
+.stat-tiles-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.stat-value-medium {
+  font-size: 1.5rem;
+}
+
+.text-warning {
+  color: var(--sr-maroon);
+  font-weight: 500;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--sr-white);
+  font-size: 0.95rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--sr-line);
+}
+
+.data-table thead th {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--sr-ink-soft);
+  background: var(--sr-cream);
+}
+
+.data-table tfoot th,
+.data-table tfoot td {
+  border-top: 2px solid var(--sr-ink);
+  border-bottom: 0;
+  font-weight: 700;
+}
+
+.data-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.row-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.eyebrow-label {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+/* ---------- Stepper (− 24 +) ---------- */
+
+.stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 2px solid var(--sr-ink);
+  background: var(--sr-white);
+}
+
+.stepper button {
+  width: 64px;
+  border: 0;
+  background: var(--sr-cream);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepper button:hover:not([disabled]) {
+  background: var(--sr-yellow);
+}
+
+.stepper button[disabled] {
+  color: var(--sr-line);
+  cursor: not-allowed;
+}
+
+.stepper input {
+  width: 110px;
+  border: 0;
+  border-left: 2px solid var(--sr-ink);
+  border-right: 2px solid var(--sr-ink);
+  text-align: center;
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums;
+  font-weight: 700;
+  font-size: 2.2rem;
+  -moz-appearance: textfield;
+}
+
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.stepper-large button,
+.stepper-large input {
+  min-height: 72px;
+}
+
+.stepper-small button {
+  width: 48px;
+  min-height: 48px;
+  font-size: 1.5rem;
+}
+
+.stepper-small input {
+  width: 72px;
+  font-size: 1.3rem;
+}
+
+/* ---------- Community Manager: Order ---------- */
+
+.closed-order {
+  display: grid;
+  gap: 8px;
+  border-left: 6px solid var(--sr-green-dark);
+}
+
+.closed-order h3 {
+  margin: 8px 0 2px;
+}
+
+.closed-order p {
+  margin: 0;
+}
+
+.closed-order-amount a {
+  font-weight: 500;
+}
+
+.order-builder {
+  border-top: 6px solid var(--sr-yellow);
+}
+
+.order-builder-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.order-builder-head h2 {
+  margin-bottom: 4px;
+}
+
+.order-builder-head p {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.order-builder-label {
+  display: block;
+  margin: 20px 0 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.order-builder-pounds {
+  margin: 8px 0 16px;
+  color: var(--sr-ink-soft);
+}
+
+.order-hints {
+  margin: 0 0 20px;
+  padding: 12px 16px 12px 32px;
+  background: var(--sr-cream);
+}
+
+.order-hints:empty {
+  display: none;
+}
+
+.order-hints li + li {
+  margin-top: 4px;
+}
+
+.later-drops {
+  margin-top: 32px;
+}
+
+.drop-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.drop-list button {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--sr-white);
+  border: 1px solid var(--sr-line);
+  border-left: 6px solid var(--sr-line);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drop-list li.selected button {
+  border-left-color: var(--sr-yellow);
+  border-color: var(--sr-ink);
+  border-left-color: var(--sr-yellow);
+}
+
+.drop-list-amount {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ---------- Community Manager: Preorders ---------- */
+
+.preorder-layout {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+.search-box {
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1px solid var(--sr-ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
+.preorder-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.preorder {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-yellow);
+}
+
+.preorder-done {
+  border-left-color: var(--sr-green-light);
+  background: #F3F8F1;
+}
+
+.preorder-who {
+  display: flex;
+  flex-direction: column;
+}
+
+.preorder-who strong {
+  font-size: 1.1rem;
+}
+
+.preorder-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Big on/off buttons for Paid and Picked up */
+.toggle {
+  min-height: var(--tap);
+  min-width: 124px;
+  padding: 0 16px;
+  border: 2px solid var(--sr-ink);
+  background: var(--sr-white);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggle-on {
+  background: var(--sr-green-dark);
+  border-color: var(--sr-green-dark);
+  color: var(--sr-white);
+}
+
+/* ---------- Community Manager: After Drop ---------- */
+
+.report-card {
+  border-left: 6px solid var(--sr-green-dark);
+}
+
+.report-needed {
+  border-left-color: var(--sr-yellow);
+}
+
+.report-summary {
+  margin-top: 12px;
+}
+
+.report-form {
+  margin-top: 16px;
+}
+
+.choice-group {
+  border: 0;
+  padding: 0;
+  margin: 0 0 20px;
+}
+
+.choice-group legend {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 0 14px;
+  margin-bottom: 6px;
+  border: 1px solid var(--sr-line);
+  background: var(--sr-white);
+  cursor: pointer;
+}
+
+.choice input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--sr-green-dark);
+}
+
+.choice-on {
+  border: 2px solid var(--sr-green-dark);
+  font-weight: 500;
+}
+
+/* ---------- Host Site ---------- */
+
+.host-layout {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+.next-drop h2 {
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  margin-bottom: 4px;
+}
+
+.next-drop-time {
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+.date-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: var(--sr-white);
+}
+
+.date-list li {
+  display: grid;
+  gap: 2px 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--sr-line);
+}
+
+.date-list-past {
+  opacity: 0.8;
+}
+
+.contact-card {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--sr-line);
+  margin-bottom: 12px;
+}
+
+.contact-card p {
+  margin-bottom: 8px;
+}
+
+.contact-card .btn {
+  margin: 0 8px 8px 0;
+}
+
+/* ---------- Admin: Drop Cycles ---------- */
+
+.cycles-layout {
+  display: grid;
+  gap: 32px;
+  align-items: start;
+}
+
+.cycle-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.cycle {
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-line);
+}
+
+.cycle-open {
+  border-left-color: var(--sr-yellow);
+}
+
+.cycle-summary {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 16px;
+  background: none;
+  border: 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cycle-summary strong {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.cycle-summary-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.cycle-detail {
+  padding: 0 16px 16px;
+  overflow-x: auto;
+}
+
+.cycle-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.add-site {
+  display: flex;
+  gap: 8px;
+}
+
+.add-site select,
+.editing-row input {
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid var(--sr-ink);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+.site-checklist {
+  border: 0;
+  padding: 0;
+  margin: 0 0 20px;
+}
+
+.site-checklist legend {
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.site-checklist-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  cursor: pointer;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--sr-green-dark);
+}
+
+.section-toggle {
+  font-size: 1.05rem;
+  margin-bottom: 12px;
+}
+
+/* ---------- Admin: Orders ---------- */
+
+.cycle-dates {
+  margin: 0 0 16px;
+  font-size: 1.05rem;
+}
+
+.progress-block {
+  margin-bottom: 32px;
+}
+
+.progress-label {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.progress {
+  height: 16px;
+  background: var(--sr-white);
+  border: 1px solid var(--sr-line);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--sr-green-dark);
+}
+
+.orders-layout {
+  display: grid;
+  gap: 32px;
+  align-items: start;
+}
+
+/* ---------- Admin: Farms ---------- */
+
+.needed-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 1.05rem;
+}
+
+.farm-section {
+  margin-top: 28px;
+}
+
+.listing-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.listing-card {
+  padding: 18px;
+  background: var(--sr-white);
+  border-top: 4px solid var(--sr-green-light);
+}
+
+.listing-card h3 {
+  margin-bottom: 4px;
+}
+
+.listing-card p {
+  margin: 0 0 4px;
+}
+
+.buy-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* ---------- Admin: Impact ---------- */
+
+.hero-numbers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.hero-number {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: var(--sr-green-dark);
+  color: var(--sr-white);
+}
+
+.hero-number:first-child {
+  background: var(--sr-yellow);
+  color: var(--sr-ink);
+}
+
+.hero-number-value {
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums;
+  font-weight: 700;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  line-height: 1.1;
+}
+
+.hero-number-label {
+  font-size: 0.95rem;
+  margin-top: 6px;
+}
+
+.chart-block {
+  margin-bottom: 24px;
+}
+
+/* Column chart: thin bars, 2px gaps, rounded tops anchored to the baseline */
+.column-chart {
+  margin-top: 16px;
+}
+
+.column-chart-plot {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 220px;
+  border-bottom: 1px solid var(--sr-ink-soft);
+}
+
+.column {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  outline-offset: 0;
+}
+
+.column-bar {
+  width: 100%;
+  max-width: 40px; /* keep bars thin when there are only a few drops */
+  min-height: 2px;
+  background: var(--sr-green-dark);
+  border-radius: 4px 4px 0 0;
+}
+
+.column:hover .column-bar,
+.column:focus-visible .column-bar {
+  background: var(--sr-green);
+}
+
+/* Tooltip on hover or keyboard focus */
+.column:hover::after,
+.column:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: var(--sr-soil);
+  color: var(--sr-cream);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.column:first-child:hover::after,
+.column:first-child:focus-visible::after {
+  left: 0;
+  transform: none;
+}
+
+.column:last-child:hover::after,
+.column:last-child:focus-visible::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.column-chart-axis {
+  display: flex;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.column-chart-axis span {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.7rem;
+  color: var(--sr-ink-soft);
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.chart-table {
+  margin-top: 16px;
+}
+
+.chart-table summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  color: var(--sr-green-dark);
+  cursor: pointer;
+}
+
+.impact-columns {
+  display: grid;
+  gap: 16px;
+}
+
+.bar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.bar-list-text {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.bar-track {
+  height: 10px;
+}
+
+.bar-fill {
+  height: 100%;
+  min-width: 2px;
+  background: var(--sr-green-dark);
+  border-radius: 0 4px 4px 0;
+}
+
+.impact-footnote {
+  margin-top: 20px;
+  font-size: 0.9rem;
+}
+
+/* Public Drop Dates & Locations page */
+.next-drop-date {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+/* ---------- Tablet and up ---------- */
+
+@media (min-width: 700px) {
+  .stat-tiles-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .hero-numbers {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .preorder {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .date-list li {
+    grid-template-columns: 2fr 1.5fr 1fr;
+    align-items: center;
+  }
+
+  .listing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .closed-order {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .closed-order-amount {
+    text-align: right;
+  }
+}
+
+@media (min-width: 1000px) {
+  .preorder-layout {
+    grid-template-columns: 4fr 8fr;
+  }
+
+  .preorder-layout > .block,
+  .cycles-layout > .block {
+    position: sticky;
+    top: 16px;
+  }
+
+  .cycles-layout {
+    grid-template-columns: 4fr 8fr;
+  }
+
+  .host-layout {
+    grid-template-columns: 8fr 4fr;
+  }
+
+  .orders-layout,
+  .impact-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .listing-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ---------- Printing (Orders: "Print purchase lists") ---------- */
+
+@media print {
+  .site-header,
+  .green-band,
+  .page-hero,
+  .tab-bar,
+  .public-footer,
+  .copyright,
+  .toolbar,
+  .progress-block,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .orders-layout {
+    display: block;
+  }
+
+  .order-card {
+    break-inside: avoid;
+    border: 1px solid #999;
+  }
+}

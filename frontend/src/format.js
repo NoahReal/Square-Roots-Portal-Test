@@ -45,3 +45,45 @@ export function todayIso() {
   const pad = (n) => String(n).padStart(2, '0')
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
+
+// timeRange("11:00:00", "13:00:00") -> "11 a.m. to 1 p.m."
+export function timeRange(start, end) {
+  return `${clockTime(start)} to ${clockTime(end)}`
+}
+
+function clockTime(hhmm) {
+  const [hour, minute] = hhmm.split(':').map(Number)
+  const suffix = hour < 12 ? 'a.m.' : 'p.m.'
+  const twelveHour = hour % 12 === 0 ? 12 : hour % 12
+  return minute ? `${twelveHour}:${String(minute).padStart(2, '0')} ${suffix}` : `${twelveHour} ${suffix}`
+}
+
+// How long until a deadline, in plain words: "3 days left", "5 hours left", "closed"
+export function timeLeft(isoDateTime) {
+  const ms = new Date(isoDateTime) - new Date()
+  if (ms <= 0) return 'closed'
+  const hours = Math.floor(ms / 3_600_000)
+  if (hours >= 48) return `${Math.floor(hours / 24)} days left`
+  if (hours >= 1) return `${hours} ${hours === 1 ? 'hour' : 'hours'} left`
+  return 'less than an hour left'
+}
+
+// For <input type="datetime-local">: "2026-10-06T17:00" in the browser's time zone
+export function toLocalInput(isoDateTime) {
+  const d = new Date(isoDateTime)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// Back from <input type="datetime-local"> to a full timestamp the server understands
+export function fromLocalInput(value) {
+  return new Date(value).toISOString()
+}
+
+// Adds days to a "2026-10-10" date and returns the same format
+export function addDays(isoDate, days) {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  const d = new Date(year, month - 1, day + days)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}

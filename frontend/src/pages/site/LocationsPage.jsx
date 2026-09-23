@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api'
+import { longDate } from '../../format'
 import { FacebookIcon, InstagramIcon } from '../../components/Icons'
 
-// Copied from the live site. Once drop cycles are built (step 2), these can come from the portal instead.
-const DROP_DATES_YEAR = 2024
-const DROP_DATES = [
-  'Jan 13 & 27', 'Feb 10 & 24', 'Mar 9 & 23', 'Apr 6 & 20', 'May 4 & 25', 'Jun 8 & 22',
-  'Jul 13 & 27', 'Aug 10 & 24', 'Sep 7 & 21', 'Oct 5 & 19', 'Nov 2 & 23', 'Dec 7 & 21',
-]
+// Drop dates come from the drop cycles in the portal, grouped by month like the
+// live site shows them: "Oct 10 & 24".
+function groupByMonth(isoDates) {
+  const months = new Map()
+  for (const iso of isoDates) {
+    const [year, month, day] = iso.split('-').map(Number)
+    const name = new Date(year, month - 1, 1).toLocaleDateString('en-CA', { month: 'short' })
+    months.set(name, [...(months.get(name) ?? []), day])
+  }
+  // "Oct 10 & 24", or "Jan 3, 17 & 31" when a month has three drops
+  const joinDays = (days) => (days.length > 1 ? `${days.slice(0, -1).join(', ')} & ${days.at(-1)}` : `${days[0]}`)
+  return [...months].map(([name, days]) => `${name} ${joinDays(days)}`)
+}
 
 function directionsUrl(site) {
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${site.address}, ${site.name}, Nova Scotia`)
@@ -16,9 +24,11 @@ function directionsUrl(site) {
 
 export default function LocationsPage() {
   const [sites, setSites] = useState(null)
+  const [dropDates, setDropDates] = useState(null)
 
   useEffect(() => {
     api('/sites/').then(setSites).catch(() => setSites([]))
+    api('/drop-dates/').then(setDropDates).catch(() => setDropDates(null))
   }, [])
 
   const highlights = sites?.filter((site) => site.highlight) ?? []
@@ -35,10 +45,11 @@ export default function LocationsPage() {
             </Link>
           </div>
           <div className="drop-dates">
-            <h2>{DROP_DATES_YEAR} Drop Dates</h2>
+            <h2>{dropDates?.year ?? new Date().getFullYear()} Drop Dates</h2>
+            {dropDates?.next && <p className="next-drop-date">Next drop: {longDate(dropDates.next)}</p>}
             <ul>
-              {DROP_DATES.map((date) => (
-                <li key={date}>{date}</li>
+              {groupByMonth(dropDates?.dates ?? []).map((line) => (
+                <li key={line}>{line}</li>
               ))}
             </ul>
           </div>

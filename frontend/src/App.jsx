@@ -20,11 +20,18 @@ import Layout from './components/Layout'
 import LoginPage from './pages/portal/LoginPage'
 import PendingPage from './pages/portal/PendingPage'
 import PortalHomePage from './pages/portal/PortalHomePage'
-import ComingSoonPage from './pages/portal/ComingSoonPage'
 import ApiPage from './pages/portal/ApiPage'
 import SignupsPage from './pages/portal/SignupsPage'
 import ProducePage from './pages/portal/farm/ProducePage'
 import PickupsPage from './pages/portal/farm/PickupsPage'
+import DropCyclesPage from './pages/portal/admin/DropCyclesPage'
+import OrdersPage from './pages/portal/admin/OrdersPage'
+import FarmsPage from './pages/portal/admin/FarmsPage'
+import ImpactPage from './pages/portal/admin/ImpactPage'
+import OrderPage from './pages/portal/manager/OrderPage'
+import PreordersPage from './pages/portal/manager/PreordersPage'
+import AfterDropPage from './pages/portal/manager/AfterDropPage'
+import HostDropsPage from './pages/portal/host/HostDropsPage'
 
 // Only lets an approved, logged-in user with the right role through.
 function RequireRole({ role }) {
@@ -34,15 +41,25 @@ function RequireRole({ role }) {
   return <Outlet />
 }
 
-// Which page component to show for each portal menu item. As screens get built,
-// add them here, e.g.  if (item.to === '/portal/admin/cycles') return <DropCyclesPage />
-function pageFor(item, roleConfig) {
-  if (item.to === roleConfig.home) return <PortalHomePage />
-  if (item.to === '/portal/admin/signups') return <SignupsPage />
-  if (item.to === '/portal/admin/api') return <ApiPage />
-  if (item.to === '/portal/farm/produce') return <ProducePage />
-  if (item.to === '/portal/farm/pickups') return <PickupsPage />
-  return <ComingSoonPage item={item} />
+// Which page component shows for each portal menu item (the menus are in roles.js).
+const PAGES = {
+  '/portal/admin/signups': SignupsPage,
+  '/portal/admin/cycles': DropCyclesPage,
+  '/portal/admin/orders': OrdersPage,
+  '/portal/admin/farms': FarmsPage,
+  '/portal/admin/impact': ImpactPage,
+  '/portal/admin/api': ApiPage,
+  '/portal/manager/order': OrderPage,
+  '/portal/manager/preorders': PreordersPage,
+  '/portal/manager/after-drop': AfterDropPage,
+  '/portal/farm/produce': ProducePage,
+  '/portal/farm/pickups': PickupsPage,
+  '/portal/host': HostDropsPage,
+}
+
+function pageFor(item) {
+  const Page = PAGES[item.to] ?? PortalHomePage
+  return <Page />
 }
 
 // Start each new page at the top, like a normal website.
@@ -83,7 +100,7 @@ export default function App() {
           <Route key={role} element={<RequireRole role={role} />}>
             <Route element={<Layout />}>
               {config.nav.map((item) => (
-                <Route key={item.to} path={item.to} element={pageFor(item, config)} />
+                <Route key={item.to} path={item.to} element={pageFor(item)} />
               ))}
             </Route>
           </Route>
