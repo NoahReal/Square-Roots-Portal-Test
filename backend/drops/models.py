@@ -155,6 +155,31 @@ class PriceTier(models.TextChoices):
     FREE = "free", "Free"
 
 
+class StandingReservation(models.Model):
+    """A customer who asked to reserve at every drop at their location ("reserve every drop").
+
+    Each time a new drop is scheduled there, a reservation is made for them automatically
+    (or a waitlist spot, if it's full) and they're emailed. Stopping deletes this.
+    """
+
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="standing_reservations")
+    customer_name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    bundles = models.PositiveSmallIntegerField(default=1)
+    price_tier = models.CharField(max_length=16, choices=PriceTier.choices, default=PriceTier.STANDARD)
+    pay_it_forward = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    delivery = models.BooleanField(default=False)
+    delivery_address = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return f"{self.customer_name} reserves {self.bundles} at every {self.site} drop"
+
+
 class Preorder(models.Model):
     """A customer who reserved bundles at a drop, online or through their Community Manager."""
 
@@ -172,6 +197,10 @@ class Preorder(models.Model):
     price_tier = models.CharField(max_length=16, choices=PriceTier.choices, default=PriceTier.STANDARD)
     delivery = models.BooleanField(default=False, help_text="Home delivery instead of picking up at the drop.")
     delivery_address = models.CharField(max_length=200, blank=True)
+    # An optional gift on top of the bundle price, paid at the drop, to help cover free bundles.
+    pay_it_forward = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    # Set when this was made automatically from a "reserve every drop" request.
+    standing = models.ForeignKey(StandingReservation, null=True, blank=True, on_delete=models.SET_NULL, related_name="preorders")
     paid = models.BooleanField(default=False)
     picked_up = models.BooleanField(default=False)
     source = models.CharField(max_length=16, choices=Source.choices, default=Source.MANAGER)
@@ -210,6 +239,8 @@ class WaitlistEntry(models.Model):
     price_tier = models.CharField(max_length=16, choices=PriceTier.choices, default=PriceTier.STANDARD)
     delivery = models.BooleanField(default=False)
     delivery_address = models.CharField(max_length=200, blank=True)
+    pay_it_forward = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    standing = models.ForeignKey(StandingReservation, null=True, blank=True, on_delete=models.SET_NULL, related_name="waitlist_entries")
     manage_token = models.CharField(max_length=40, db_index=True, default=new_manage_token)
     created_at = models.DateTimeField(auto_now_add=True)
 

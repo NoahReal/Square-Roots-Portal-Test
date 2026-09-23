@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import IsCommunityManager
 from .models import BundleOrder, Preorder, SiteDrop
-from .reservations import promote_waitlist
+from .reservations import notify_customers, promote_waitlist
 from .serializers import DropReportSerializer, PreorderSerializer, SiteDropSerializer
 
 # Nobody orders more than this at once; it catches typos like 2000 instead of 20.
@@ -170,3 +170,24 @@ class DropReportView(APIView):
         serializer.save(site_drop=site_drop)
         return Response(SiteDropSerializer(with_details(SiteDrop.objects.filter(pk=pk)).get()).data)
 
+
+
+class MessageCustomersView(APIView):
+    """Emails everyone with a reservation or waitlist spot at one of your drops, e.g. about the weather.
+    Says who has no email, so you can phone them (Community Managers)."""
+
+    permission_classes = [IsCommunityManager]
+
+    def post(self, request, pk):
+        site_drop = my_site_drop(request, pk)
+        message = (request.data.get("message") or "").strip()
+        if not message:
+            raise ValidationError({"message": "Write the message you'd like to send."})
+        if len(message) > 2000:
+            raise ValidationError({"message": "Please keep the message under 2,000 characters."})
+        emailed, phone_only = notify_customers(
+            site_drop, f"A message about your Square Roots {site_drop.site.name} drop",
+            f"{message}\n\n{request.user.get_full_name() or 'Your Community Manager'}, Square Roots {site_drop.site.name}",
+            site_url(request),
+        )
+        return Response({"emailed": emailed, "phone_only": phone_only})

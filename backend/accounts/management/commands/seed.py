@@ -18,7 +18,8 @@ from django.utils import timezone
 
 from accounts.models import Application, User
 from drops.models import (
-    BundleOrder, DropCycle, DropReport, OperatingSettings, Preorder, Site, SiteDrop, WaitlistEntry, new_manage_token,
+    BundleOrder, DropCycle, DropReport, OperatingSettings, Preorder, Site, SiteDrop, StandingReservation, WaitlistEntry,
+    new_manage_token,
 )
 from farms.models import Farm, FarmOrder, FarmOrderLine, ProduceListing
 from website.models import ContactMessage, Event
@@ -313,6 +314,8 @@ class Command(BaseCommand):
                 bundles_total += self.fill_site_drop(site_drop, number, usual, users)
                 if number == 1 and site.online_reservations:
                     self.add_online_reservations(site_drop)
+                if number == 2:
+                    self.add_every_drop_reservations(site_drop)
             counts["farm_orders"] += self.create_farm_orders(cycle, number, bundles_total, farms)
             drop_date += timedelta(weeks=2)
         return counts
@@ -384,13 +387,22 @@ class Command(BaseCommand):
             name = customers.pop()
             bundles = min(rnd.choice([1, 1, 1, 2]), target - reserved)
             delivery = bool(site_drop.site.delivery_partner) and rnd.random() < 0.3
+            tier = rnd.choice(["standard"] * 7 + ["at_cost"] * 2 + ["free"])
+            details = {
+                "customer_name": name, "bundles": bundles, "price_tier": tier,
+                "email": f"{name.split()[0].lower()}{rnd.randint(10, 99)}@example.com",
+                "phone": f"902-555-{rnd.randint(1000, 9999)}" if rnd.random() < 0.4 else "",
+                # About a quarter of people paying the standard price add a pay-it-forward gift.
+                "pay_it_forward": Decimal(rnd.choice([2, 5, 10])) if tier == "standard" and rnd.random() < 0.25 else Decimal("0"),
+                "delivery": delivery, "delivery_address": rnd.choice(DELIVERY_ADDRESSES) if delivery else "",
+            }
+            # The first person at each location with a demo Community Manager reserves every drop.
+            standing = None
+            if reserved == 0 and site_drop.site.people.exists():
+                standing = StandingReservation.objects.create(site=site_drop.site, **details)
             Preorder.objects.create(
-                site_drop=site_drop, customer_name=name, bundles=bundles, source=Preorder.Source.ONLINE,
-                email=f"{name.split()[0].lower()}{rnd.randint(10, 99)}@example.com",
-                phone=f"902-555-{rnd.randint(1000, 9999)}" if rnd.random() < 0.4 else "",
-                price_tier=rnd.choice(["standard"] * 7 + ["at_cost"] * 2 + ["free"]),
-                delivery=delivery, delivery_address=rnd.choice(DELIVERY_ADDRESSES) if delivery else "",
-                manage_token=new_manage_token(),
+                site_drop=site_drop, source=Preorder.Source.ONLINE, manage_token=new_manage_token(), standing=standing,
+                **details,
             )
             reserved += bundles
         if full:
@@ -399,6 +411,15 @@ class Command(BaseCommand):
                     site_drop=site_drop, customer_name=name, bundles=1,
                     email=f"{name.split()[0].lower()}{rnd.randint(10, 99)}@example.com",
                 )
+
+    def add_every_drop_reservations(self, site_drop):
+        """People who reserve every drop already have a reservation for the drop after next."""
+        for standing in site_drop.site.standing_reservations.all():
+            fields = ["customer_name", "phone", "email", "bundles", "price_tier", "pay_it_forward", "delivery", "delivery_address"]
+            Preorder.objects.create(
+                site_drop=site_drop, source=Preorder.Source.ONLINE, manage_token=new_manage_token(), standing=standing,
+                **{field: getattr(standing, field) for field in fields},
+            )
 
     def create_farm_orders(self, cycle, number, bundles_total, farms):
         """Buys the produce for a cycle from the farms. Returns how many orders it made."""

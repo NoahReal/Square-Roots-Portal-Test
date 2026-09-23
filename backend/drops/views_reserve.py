@@ -1,7 +1,7 @@
 """API for customers reserving bundles on the website. No account needed: each reservation has a
 private link for changing or cancelling it, and a pickup code to show at the drop."""
 
-import re
+from decimal import Decimal
 
 from django.db import transaction
 from django.utils.decorators import method_decorator
@@ -13,10 +13,11 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from .models import OperatingSettings, Preorder, PriceTier, Site, SiteDrop, WaitlistEntry, new_manage_token
+from .models import OperatingSettings, Preorder, PriceTier, Site, SiteDrop, StandingReservation, WaitlistEntry, new_manage_token
 from .reservations import (
-    MAX_BUNDLES_PER_RESERVATION, amount_due, bundles_left, promote_waitlist, reservable_drops,
-    send_confirmation, send_waitlist_joined, waitlist_position,
+    MAX_BUNDLES_PER_RESERVATION, already_reserved, amount_due, apply_standing, bundles_left, digits,
+    farm_cost_per_bundle, pay_it_forward_this_year, promote_waitlist, reservable_drops, send_confirmation,
+    send_waitlist_joined, waitlist_position,
 )
 
 
@@ -45,7 +46,7 @@ class ReserveOptionsView(APIView):
         for site in Site.objects.filter(is_active=True):
             drops = [
                 {**drop_json(d), "bundles_left": bundles_left(d), "waitlist_count": d.waitlist.count()}
-                for d in reservable_drops(site).select_related("site")
+                for d in reservable_drops(site)
             ]
             sites.append(
                 {
@@ -67,9 +68,26 @@ class ReserveOptionsView(APIView):
                     "delivery_fee": f"{prices.delivery_fee:.2f}",
                 },
                 "max_bundles": MAX_BUNDLES_PER_RESERVATION,
+                "money": money_json(prices),
                 "sites": sites,
             }
         )
+
+
+def money_json(prices):
+    """Where a bundle's price goes, and what neighbours have given to cover free bundles this year."""
+    farms = farm_cost_per_bundle()
+    given = pay_it_forward_this_year()
+    return {
+        "standard": f"{prices.standard_price:.2f}",
+        "to_square_roots": f"{prices.at_cost_price:.2f}",
+        "to_manager": f"{prices.manager_share:.2f}",
+        # Part of the Square Roots share, so it can't be more than that.
+        "to_farms": f"{min(farms, prices.at_cost_price):.2f}" if farms else None,
+        "pay_it_forward_this_year": f"{given:.2f}",
+        # A free bundle costs Square Roots the at-cost price, so that's what a gift has to cover.
+        "free_bundles_covered": int(given // prices.at_cost_price) if prices.at_cost_price else 0,
+    }
 
 
 class ReservationSerializer(serializers.Serializer):
@@ -95,6 +113,10 @@ class ReservationSerializer(serializers.Serializer):
     )
     delivery = serializers.BooleanField(default=False)
     delivery_address = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    pay_it_forward = serializers.DecimalField(
+        max_digits=6, decimal_places=2, min_value=Decimal("0"), max_value=Decimal("100"), required=False,
+        error_messages={"invalid": "Enter an amount in dollars, like 5.", "max_value": "Thank you! Gifts online are up to $100."},
+    )
 
     def validate_customer_name(self, value):
         return value.strip()
@@ -125,6 +147,7 @@ class NewReservationSerializer(ReservationSerializer):
         error_messages={"required": "Choose a location.", "does_not_exist": "Choose a location.", "null": "Choose a location."},
     )
     join_waitlist = serializers.BooleanField(default=False)
+    every_drop = serializers.BooleanField(default=False)
     # A hidden field real people never fill in; spam bots usually do.
     website = serializers.CharField(required=False, allow_blank=True)
 
@@ -137,22 +160,6 @@ class NewReservationSerializer(ReservationSerializer):
             raise ValidationError({"site_drop": "Reservations for this drop have closed. Choose the next one."})
         check_delivery_offered(site_drop, data)
         return data
-
-
-def digits(text):
-    return re.sub(r"\D", "", text or "")
-
-
-def already_reserved(site_drop, email, phone, exclude=None):
-    people = list(site_drop.preorders.all()) + list(site_drop.waitlist.all())
-    for person in people:
-        if exclude is not None and type(person) is type(exclude) and person.pk == exclude.pk:
-            continue
-        if email and person.email.lower() == email.lower():
-            return True
-        if phone and digits(person.phone) and digits(person.phone)[-7:] == digits(phone)[-7:]:
-            return True
-    return False
 
 
 def check_delivery_offered(site_drop, data):
@@ -177,6 +184,8 @@ def reservation_json(reservation):
         "price_tier": reservation.price_tier,
         "delivery": reservation.delivery,
         "delivery_address": reservation.delivery_address,
+        "pay_it_forward": f"{reservation.pay_it_forward:.2f}",
+        "every_drop": reservation.standing_id is not None,
         "amount_due": f"{amount_due(reservation):.2f}",
         "picked_up": False if waiting else reservation.picked_up,
         # Until ordering closes, customers can change or cancel (and add bundles, if any are left).
@@ -209,6 +218,7 @@ class ReserveView(APIView):
         data = dict(serializer.validated_data)
         site_drop = data.pop("site_drop")
         join_waitlist = data.pop("join_waitlist")
+        every_drop = data.pop("every_drop")
         if data.pop("website", ""):
             raise ValidationError({"detail": "Something went wrong. Please try again."})
         if already_reserved(site_drop, data.get("email"), data.get("phone")):
@@ -217,22 +227,29 @@ class ReserveView(APIView):
             )
 
         left = bundles_left(site_drop)
-        if data["bundles"] <= left:
-            preorder = Preorder.objects.create(
-                site_drop=site_drop, source=Preorder.Source.ONLINE, manage_token=new_manage_token(), **data
+        if data["bundles"] > left and not join_waitlist:
+            message = (
+                "All the bundles for this drop have been reserved. You can join the waitlist."
+                if left == 0
+                else f"Only {left} {'bundle is' if left == 1 else 'bundles are'} left. Choose fewer, or join the waitlist."
             )
-            send_confirmation(preorder, site_url(request))
-            return Response(reservation_json(preorder), status=201)
-        if join_waitlist:
-            entry = WaitlistEntry.objects.create(site_drop=site_drop, **data)
-            send_waitlist_joined(entry, site_url(request))
-            return Response(reservation_json(entry), status=201)
-        message = (
-            "All the bundles for this drop have been reserved. You can join the waitlist."
-            if left == 0
-            else f"Only {left} {'bundle is' if left == 1 else 'bundles are'} left. Choose fewer, or join the waitlist."
-        )
-        return Response({"detail": message, "bundles_left": left, "full": True}, status=409)
+            return Response({"detail": message, "bundles_left": left, "full": True}, status=409)
+
+        standing = StandingReservation.objects.create(site=site_drop.site, **data) if every_drop else None
+        if data["bundles"] <= left:
+            reservation = Preorder.objects.create(
+                site_drop=site_drop, source=Preorder.Source.ONLINE, manage_token=new_manage_token(), standing=standing, **data
+            )
+            send_confirmation(reservation, site_url(request))
+        else:
+            reservation = WaitlistEntry.objects.create(site_drop=site_drop, standing=standing, **data)
+            send_waitlist_joined(reservation, site_url(request))
+        if standing:
+            # Later drops that are already scheduled get a reservation too.
+            for later in reservable_drops(site_drop.site):
+                if later.pk != site_drop.pk:
+                    apply_standing(later, site_url(request), only=standing)
+        return Response(reservation_json(reservation), status=201)
 
 
 def find_reservation(token):
@@ -282,6 +299,11 @@ class ManageReservationView(APIView):
         for field, value in data.items():
             setattr(reservation, field, value)
         reservation.save()
+        if reservation.standing:
+            # Changes carry forward to the drops reserved automatically from now on.
+            for field, value in data.items():
+                setattr(reservation.standing, field, value)
+            reservation.standing.save()
 
         if isinstance(reservation, Preorder):
             send_confirmation(reservation, site_url(request), subject="Your reservation was updated")
@@ -298,3 +320,35 @@ class ManageReservationView(APIView):
         if isinstance(reservation, Preorder):
             promote_waitlist(site_drop, site_url(request))
         return Response({"ok": True})
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class EveryDropView(APIView):
+    """Starts or stops reserving automatically at every drop at this reservation's location. Public, by private link."""
+
+    permission_classes = [AllowAny]
+
+    @transaction.atomic
+    def post(self, request, token):
+        reservation = find_reservation(token)
+        if reservation.standing is None:
+            fields = [
+                "customer_name", "phone", "email", "bundles", "price_tier", "pay_it_forward", "delivery", "delivery_address",
+            ]
+            reservation.standing = StandingReservation.objects.create(
+                site=reservation.site_drop.site, **{field: getattr(reservation, field) for field in fields}
+            )
+            reservation.save(update_fields=["standing"])
+            for later in reservable_drops(reservation.site_drop.site):
+                if later.pk != reservation.site_drop_id:
+                    apply_standing(later, site_url(request), only=reservation.standing)
+        return Response(reservation_json(reservation))
+
+    @transaction.atomic
+    def delete(self, request, token):
+        reservation = find_reservation(token)
+        if reservation.standing:
+            # Reservations already made stay; no new ones will be made.
+            reservation.standing.delete()
+            reservation.refresh_from_db()
+        return Response(reservation_json(reservation))

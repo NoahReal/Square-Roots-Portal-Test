@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 from django.core import mail
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from .models import Preorder, WaitlistEntry
+from .models import Preorder, StandingReservation, WaitlistEntry
+from .reservations import apply_standing
 from .tests import DropTestCase, make_drop
 
 
@@ -156,3 +159,96 @@ class ManagerSideTests(ReserveTestCase):
 
         self.cm.patch("/api/manager/reservations/", {"online_reservations": False}, format="json")
         self.assertIn("doesn't take online reservations", str(self.reserve(email="jo@example.com").data["site_drop"]))
+
+
+class PayItForwardTests(ReserveTestCase):
+    def test_gift_is_added_to_what_you_pay_and_counted_for_free_bundles(self):
+        response = self.reserve(pay_it_forward="5")
+        self.assertEqual(response.data["amount_due"], "15.00")  # $10 bundle + $5 gift
+        money = self.public.get("/api/reserve/options/").data["money"]
+        self.assertEqual(money["pay_it_forward_this_year"], "5.00")
+        self.assertEqual(money["free_bundles_covered"], 0)  # a free bundle needs $7.50
+        self.reserve(email="sam@example.com", pay_it_forward="10")
+        self.assertEqual(self.public.get("/api/reserve/options/").data["money"]["free_bundles_covered"], 2)
+
+    def test_where_the_money_goes(self):
+        money = self.public.get("/api/reserve/options/").data["money"]
+        self.assertEqual((money["standard"], money["to_square_roots"], money["to_manager"]), ("10.00", "7.50", "2.50"))
+        self.assertIsNone(money["to_farms"])  # no farm purchases or sales logged yet
+
+    def test_gifts_are_capped(self):
+        self.assertEqual(self.reserve(pay_it_forward="500").status_code, 400)
+
+
+class EveryDropTests(ReserveTestCase):
+    def test_reserving_every_drop_covers_drops_already_scheduled_and_new_ones(self):
+        later = make_drop(self.site, 24)
+        first = self.reserve(every_drop=True, bundles=2).data
+        self.assertTrue(first["every_drop"])
+        self.assertEqual(Preorder.objects.filter(site_drop=later).count(), 1)  # the next one too
+
+        mail.outbox.clear()
+        response = self.team.post(
+            "/api/admin/cycles/",
+            {"drop_date": str(later.drop_date + timedelta(days=14)), "order_cutoff": (later.order_cutoff + timedelta(days=14)).isoformat(),
+             "sites": [self.site.id]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        newest = Preorder.objects.filter(site_drop__cycle_id=response.data["id"]).get()
+        self.assertEqual((newest.bundles, newest.customer_name), (2, "Alex B."))
+        self.assertIn("reserved your next bundle", mail.outbox[0].subject)
+
+    def test_changes_carry_forward_and_stopping_keeps_existing_reservations(self):
+        token = self.reserve(every_drop=True).data["token"]
+        self.public.patch(f"/api/reserve/{token}/", {"bundles": 3}, format="json")
+        self.assertEqual(StandingReservation.objects.get().bundles, 3)
+        response = self.public.delete(f"/api/reserve/{token}/every-drop/")
+        self.assertFalse(response.data["every_drop"])
+        self.assertFalse(StandingReservation.objects.exists())
+        self.assertEqual(Preorder.objects.count(), 1)
+
+    def test_start_every_drop_from_an_existing_reservation(self):
+        token = self.reserve().data["token"]
+        self.assertTrue(self.public.post(f"/api/reserve/{token}/every-drop/").data["every_drop"])
+
+    def test_full_drops_put_every_drop_customers_on_the_waitlist(self):
+        self.reserve(every_drop=True, bundles=2)
+        self.site.reservation_limit = 1
+        self.site.save()
+        later = make_drop(self.site, 24)
+        apply_standing(later, "http://testserver")
+        self.assertEqual(later.waitlist.count(), 1)
+
+
+class NoticeTests(ReserveTestCase):
+    def test_moving_a_drop_emails_customers(self):
+        self.reserve()
+        mail.outbox.clear()
+        response = self.team.patch(f"/api/admin/site-drops/{self.drop.id}/", {"starts_at": "14:00", "ends_at": "16:00"}, format="json")
+        self.assertEqual(response.data["customers_emailed"], 1)
+        self.assertIn("has changed", mail.outbox[0].subject)
+        self.assertIn("2:00 p.m.", mail.outbox[0].body)
+
+    def test_changing_only_the_cutoff_sends_nothing(self):
+        self.reserve()
+        mail.outbox.clear()
+        cutoff = (self.drop.order_cutoff - timedelta(days=1)).isoformat()
+        self.team.patch(f"/api/admin/site-drops/{self.drop.id}/", {"order_cutoff": cutoff}, format="json")
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_cancelling_a_drop_emails_customers(self):
+        self.reserve()
+        mail.outbox.clear()
+        self.team.delete(f"/api/admin/site-drops/{self.drop.id}/")
+        self.assertIn("cancelled", mail.outbox[0].subject)
+
+    def test_manager_messages_customers_and_hears_who_has_no_email(self):
+        self.reserve()
+        self.reserve(email="", phone="902-555-0199", customer_name="Pat D.")
+        mail.outbox.clear()
+        response = self.cm.post(f"/api/manager/drops/{self.drop.id}/message/", {"message": "We're moving indoors."}, format="json")
+        self.assertEqual(response.data["emailed"], 1)
+        self.assertEqual(response.data["phone_only"], [{"customer_name": "Pat D.", "phone": "902-555-0199"}])
+        self.assertIn("moving indoors", mail.outbox[0].body)
+        self.assertEqual(self.cm.post(f"/api/manager/drops/{self.drop.id}/message/", {"message": " "}, format="json").status_code, 400)

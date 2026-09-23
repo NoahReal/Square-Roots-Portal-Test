@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -29,12 +31,14 @@ class SiteSerializer(serializers.ModelSerializer):
 class PreorderSerializer(serializers.ModelSerializer):
     price_tier_label = serializers.CharField(source="get_price_tier_display", read_only=True)
     amount_due = serializers.SerializerMethodField()
+    every_drop = serializers.SerializerMethodField()
 
     class Meta:
         model = Preorder
         fields = [
             "id", "customer_name", "phone", "email", "bundles", "price_tier", "price_tier_label",
             "delivery", "delivery_address", "paid", "picked_up", "source", "pickup_code", "amount_due",
+            "pay_it_forward", "every_drop",
         ]
         read_only_fields = ["source", "pickup_code"]
         extra_kwargs = {
@@ -47,6 +51,9 @@ class PreorderSerializer(serializers.ModelSerializer):
 
     def get_amount_due(self, preorder):
         return f"{amount_due(preorder):.2f}"
+
+    def get_every_drop(self, preorder):
+        return preorder.standing_id is not None
 
     def validate_bundles(self, value):
         if value < 1:
@@ -108,6 +115,7 @@ class SiteDropSerializer(serializers.ModelSerializer):
     online_reservations = serializers.BooleanField(source="site.online_reservations", read_only=True)
     reservation_limit = serializers.IntegerField(source="site.reservation_limit", read_only=True)
     online_count = serializers.SerializerMethodField()
+    pay_it_forward = serializers.SerializerMethodField()
     waitlist = serializers.SerializerMethodField()
     report = serializers.SerializerMethodField()
     statement = serializers.SerializerMethodField()
@@ -118,7 +126,7 @@ class SiteDropSerializer(serializers.ModelSerializer):
             "id", "cycle_name", "site_name", "drop_date", "starts_at", "ends_at", "order_cutoff",
             "ordering_open", "has_happened", "bundles", "order_updated_at",
             "preorder_count", "preorder_bundles", "picked_up_count", "delivery_count", "delivery_partner",
-            "online_reservations", "reservation_limit", "online_count", "waitlist", "report", "statement",
+            "online_reservations", "reservation_limit", "online_count", "pay_it_forward", "waitlist", "report", "statement",
         ]
 
     def _order(self, site_drop):
@@ -146,6 +154,10 @@ class SiteDropSerializer(serializers.ModelSerializer):
 
     def get_online_count(self, site_drop):
         return sum(1 for p in site_drop.preorders.all() if p.source == Preorder.Source.ONLINE)
+
+    def get_pay_it_forward(self, site_drop):
+        """Pay-it-forward gifts on reservations that were paid for: a hint when logging donations after the drop."""
+        return f"{sum((p.pay_it_forward for p in site_drop.preorders.all() if p.paid), Decimal('0')):.2f}"
 
     def get_waitlist(self, site_drop):
         return [

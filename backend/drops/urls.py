@@ -11,6 +11,7 @@ urlpatterns = [
     path("reserve/options/", views_reserve.ReserveOptionsView.as_view()),
     path("reserve/", views_reserve.ReserveView.as_view()),
     path("reserve/<str:token>/", views_reserve.ManageReservationView.as_view()),
+    path("reserve/<str:token>/every-drop/", views_reserve.EveryDropView.as_view()),
     # Host sites
     path("host/drops/", views.HostDropListView.as_view()),
     # Community Managers
@@ -21,6 +22,7 @@ urlpatterns = [
     path("manager/drops/<int:pk>/pickup/<str:code>/", views_manager.PickupCodeView.as_view()),
     path("manager/preorders/<int:pk>/", views_manager.PreorderDetailView.as_view()),
     path("manager/reservations/", views_manager.ReservationSettingsView.as_view()),
+    path("manager/drops/<int:pk>/message/", views_manager.MessageCustomersView.as_view()),
     # Admins
     path("admin/cycles/", views_admin.CycleListView.as_view()),
     path("admin/cycles/<int:pk>/", views_admin.CycleDetailView.as_view()),

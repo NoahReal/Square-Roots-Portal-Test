@@ -19,6 +19,17 @@ from accounts.permissions import IsAdminRole
 from farms.models import FarmOrder, FarmOrderLine
 from farms.serializers import FarmOrderSerializer
 from .models import BUNDLE_POUNDS, BundleOrder, DropCycle, Site, SiteDrop
+from .reservations import apply_standing, tell_customers_drop_cancelled, tell_customers_drop_moved
+
+
+def site_url(request):
+    return f"{request.scheme}://{request.get_host()}"
+
+
+def with_customers_told(response, emailed):
+    """Adds how many customers were emailed about a change, so the screen can say so."""
+    response.data["customers_emailed"] = emailed
+    return response
 
 
 def cycle_name(drop_date):
@@ -92,10 +103,12 @@ class CycleListView(APIView):
             name=cycle_name(data["drop_date"]), drop_date=data["drop_date"], order_cutoff=data["order_cutoff"]
         )
         for site in data["sites"]:
-            SiteDrop.objects.create(
+            site_drop = SiteDrop.objects.create(
                 cycle=cycle, site=site, drop_date=cycle.drop_date, order_cutoff=cycle.order_cutoff,
                 starts_at=data["starts_at"], ends_at=data["ends_at"],
             )
+            # Customers who reserve every drop here get a reservation for this one.
+            apply_standing(site_drop, site_url(request))
         return Response(cycle_summary(cycles_with_details().get(pk=cycle.pk)), status=201)
 
 
@@ -156,6 +169,7 @@ class CycleDetailView(APIView):
     @transaction.atomic
     def patch(self, request, pk):
         cycle = get_object_or_404(DropCycle, pk=pk)
+        old_date = cycle.drop_date
         if "drop_date" in request.data:
             cycle.drop_date = serializers.DateField().to_internal_value(request.data["drop_date"])
             cycle.name = cycle_name(cycle.drop_date)
@@ -165,12 +179,18 @@ class CycleDetailView(APIView):
             raise ValidationError({"order_cutoff": "Ordering should close before the drop date."})
         cycle.save()
         cycle.site_drops.update(drop_date=cycle.drop_date, order_cutoff=cycle.order_cutoff)
-        return self.get(request, pk)
+        emailed = 0
+        if cycle.drop_date != old_date:
+            for site_drop in cycle.site_drops.select_related("site"):
+                emailed += tell_customers_drop_moved(site_drop, site_url(request))[0]
+        return with_customers_told(self.get(request, pk), emailed)
 
     def delete(self, request, pk):
         cycle = get_object_or_404(DropCycle, pk=pk)
         if SiteDrop.objects.filter(cycle=cycle, order__isnull=False).exists() or cycle.farm_orders.exists():
             raise ValidationError({"detail": "Sites or farms already have orders in this cycle, so it can't be deleted."})
+        for site_drop in cycle.site_drops.select_related("site"):
+            tell_customers_drop_cancelled(site_drop, site_url(request))
         cycle.delete()
         return Response(status=204)
 
@@ -183,9 +203,11 @@ class CycleSiteView(APIView):
     def post(self, request, pk):
         cycle = get_object_or_404(DropCycle, pk=pk)
         site = get_object_or_404(Site, pk=request.data.get("site"), is_active=True)
-        SiteDrop.objects.get_or_create(
+        site_drop, created = SiteDrop.objects.get_or_create(
             cycle=cycle, site=site, defaults={"drop_date": cycle.drop_date, "order_cutoff": cycle.order_cutoff}
         )
+        if created:
+            apply_standing(site_drop, site_url(request))
         return CycleDetailView().get(request, pk)
 
 
@@ -195,7 +217,8 @@ class SiteDropDetailView(APIView):
     permission_classes = [IsAdminRole]
 
     def patch(self, request, pk):
-        site_drop = get_object_or_404(SiteDrop, pk=pk)
+        site_drop = get_object_or_404(SiteDrop.objects.select_related("site"), pk=pk)
+        before = (site_drop.drop_date, site_drop.starts_at, site_drop.ends_at)
         if "drop_date" in request.data:
             site_drop.drop_date = serializers.DateField().to_internal_value(request.data["drop_date"])
         if "order_cutoff" in request.data:
@@ -208,15 +231,20 @@ class SiteDropDetailView(APIView):
         if site_drop.ends_at <= site_drop.starts_at:
             raise ValidationError({"ends_at": "The drop should end after it starts."})
         site_drop.save()
-        return CycleDetailView().get(request, site_drop.cycle_id)
+        emailed = 0
+        # Customers only need to hear about changes to when the drop is, not the ordering cutoff.
+        if (site_drop.drop_date, site_drop.starts_at, site_drop.ends_at) != before:
+            emailed = tell_customers_drop_moved(site_drop, site_url(request))[0]
+        return with_customers_told(CycleDetailView().get(request, site_drop.cycle_id), emailed)
 
     def delete(self, request, pk):
-        site_drop = get_object_or_404(SiteDrop, pk=pk)
+        site_drop = get_object_or_404(SiteDrop.objects.select_related("site"), pk=pk)
         if hasattr(site_drop, "order"):
             raise ValidationError({"detail": f"{site_drop.site} has already ordered, so it can't be removed."})
         cycle_id = site_drop.cycle_id
+        emailed = tell_customers_drop_cancelled(site_drop, site_url(request))[0]
         site_drop.delete()
-        return CycleDetailView().get(request, cycle_id)
+        return with_customers_told(CycleDetailView().get(request, cycle_id), emailed)
 
 
 class SiteOrderView(APIView):
