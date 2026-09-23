@@ -116,9 +116,23 @@ Host Site, or they can use the forms on the For Farms and Become a Community Man
 Emails (to the team about new sign-ups and contact messages, and to the applicant when they're
 approved or declined) aren't really sent. They're printed in the terminal running `runserver`.
 
-## What each role can do
+## How Square Roots works (and how the portal follows it)
 
-Every bundle is 10 lbs of produce.
+- **Bundles** are 10 lbs of seconds produce, sold on a **sliding scale**: $10 standard (pay it
+  forward), $7.50 at cost, or free for people facing food insecurity (covered by sponsored pools).
+- **Community Managers** order bundles for their location before the cutoff. From each $10 bundle
+  they keep $2.50: they owe Square Roots the at-cost price ($7.50) for every paid bundle, nothing for
+  free ones, and keep any donations. A brand-new location can pay a lower **first-drop price**.
+- **The student team buys centrally** from partner farms, based on what each farm has spare. Farms
+  get **one order per drop, after ordering closes**, so they see final numbers.
+- Produce goes to a **central sorting space**, where volunteers pack 10 lb bundles for each location.
+  Some locations also offer **home delivery** through a partner (e.g. BayRides in the St. Margaret's
+  Bay area, $1.99).
+
+Prices, the first-drop price, the delivery fee and the sorting space are set on the admin **Settings**
+screen. **The first-drop price ($3.75) is a sample**; the real one hasn't been confirmed yet.
+
+## What each role can do
 
 **Admin** (`admin`)
 - **Home**: a to-do list (sign-ups waiting, sites that haven't ordered, produce still to buy, farms
@@ -128,13 +142,19 @@ Every bundle is 10 lbs of produce.
   nobody has ordered in.
 - **Orders**: for one cycle, every site's bundle order (admins can change it, even after the cutoff;
   the Community Manager is emailed), pounds needed compared with pounds bought, and each farm's
-  purchase list. Change a farm's pickup time or instructions (the farm is emailed), remove items
+  purchase list. **Send orders to farms** once ordering closes (until then they're drafts farms
+  can't see). Change a farm's pickup time or instructions (the farm is emailed), remove items
   before pickup, mark orders paid, and print purchase lists.
 - **Farms**: everything farms have posted and still have. Expired produce is hidden. Choose an
-  upcoming cycle and buy from any listing; it goes onto that farm's order and the farm is asked to confirm.
+  upcoming cycle and buy from any listing; it goes onto that farm's draft order.
 - **Impact**: pounds diverted, bundles sold, locations active and drops held, with a chart per drop,
   totals by location, where leftovers went, and **Download CSV**.
 - Under **More** (or on the home page on a phone):
+  - **Packing & Delivery**: for one drop, what arrives from each farm and when, a packing guide
+    (about how many pounds of each item go in each bundle), what goes to each location, and the
+    home deliveries, with a CSV to send the delivery partner. Printable.
+  - **Money**: each logged drop's statement (collected, owed to Square Roots, kept by the Community
+    Manager), what's still waiting for payment, **Mark received**, and a CSV.
   - **Sign-ups**: approve or decline people who signed up. Approving a Community Manager or Host
     Site asks which location they'll run, and you can create a new location right there. Declining
     can include a reason for the email.
@@ -142,14 +162,17 @@ Every bundle is 10 lbs of produce.
     and send a password reset.
   - **Locations**: add and edit the locations shown on the website, or switch one off.
   - **Events**: add, edit, hide or delete events on the public Events page.
+  - **Settings**: bundle prices, first-drop price, delivery fee and the sorting space.
 - **Developer tools** (linked from the admin home page): every API endpoint, plus login testing tools.
 
 **Community Manager** (`cm.dartmouth`, `cm.northend`, `cm.sackville`)
 - **Order**: a big +/− counter for bundles, with the cutoff countdown, preorder count and how the
   last drop went. Orders lock at the cutoff (the server enforces this too).
-- **Preorders**: add customers, then tick **Paid** and **Picked up** at the drop. People still to
-  collect stay at the top, and there's a name search for long lists.
-- **After Drop**: log bundles sold and left over, and where leftovers went.
+- **Preorders**: add customers with their price (standard, at cost or free) and, where offered, home
+  delivery with an address. Tick **Paid** and **Picked up** at the drop. People still to collect stay
+  at the top, and there's a name search for long lists.
+- **After Drop**: log bundles sold at each price, donations, and leftovers. Each logged drop shows a
+  statement: collected, owed to Square Roots, and what you keep, plus whether payment was received.
 
 **Farm** (`farm.gaspereau`, `farm.canard`)
 - **Produce**: post, edit or mark sold out the seconds produce you have.
@@ -224,6 +247,8 @@ backend/                 Django + Django REST Framework
     views.py             public drop dates and locations, Host Site drops
     views_manager.py     Community Manager: order, preorders, after-drop report
     views_admin.py       Admin: drop cycles, orders overview, locations, dashboard, impact and CSV
+    views_operations.py  Admin: settings, money (statements and payments), packing and delivery sheet
+    money.py             how a drop's money is worked out (sliding scale, $2.50 split, first drop)
   farms/                 farms, produce listings, farm orders and their pickups
     views.py             Farm: produce and pickups
     views_admin.py       Admin: all produce, buying from farms, marking orders paid
