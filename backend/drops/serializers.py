@@ -13,7 +13,10 @@ class SiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Site
-        fields = ["id", "name", "address", "instagram_url", "facebook_url", "highlight", "delivery_partner", "next_drop"]
+        fields = [
+            "id", "name", "address", "instagram_url", "facebook_url", "highlight", "delivery_partner",
+            "online_reservations", "next_drop",
+        ]
 
     def get_next_drop(self, site):
         today = timezone.localdate()
