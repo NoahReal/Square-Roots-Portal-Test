@@ -9,6 +9,7 @@ class Farm(models.Model):
 
     name = models.CharField(max_length=150, unique=True)
     location = models.CharField(max_length=200, blank=True, help_text="Town or county, e.g. Canard, Kings County")
+    pickup_notes = models.CharField(max_length=300, blank=True, help_text="Copied onto each new order from this farm.")
 
     class Meta:
         ordering = ["name"]
@@ -82,6 +83,8 @@ class FarmOrderLine(models.Model):
     """One item in a farm order, e.g. 400 lbs of carrots at $0.35/lb."""
 
     order = models.ForeignKey(FarmOrder, on_delete=models.CASCADE, related_name="lines")
+    # The produce listing this was bought from, so removing the line can give the pounds back.
+    listing = models.ForeignKey(ProduceListing, null=True, blank=True, on_delete=models.SET_NULL, related_name="order_lines")
     produce = models.CharField(max_length=100)
     pounds = models.PositiveIntegerField()
     price_per_pound = models.DecimalField(max_digits=6, decimal_places=2)

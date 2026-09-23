@@ -13,8 +13,8 @@ urlpatterns = [
     path("api/applications/", account_views.ApplicationListView.as_view()),
     path("api/applications/<int:pk>/approve/", account_views.ApproveApplicationView.as_view()),
     path("api/applications/<int:pk>/decline/", account_views.DeclineApplicationView.as_view()),
-    path("api/sites/", include("drops.urls")),
-    path("api/farm/", include("farms.urls")),
+    path("api/", include("drops.urls")),
+    path("api/", include("farms.urls")),
     path("api/contact/", ContactView.as_view()),
     path("api/catalog/", ApiCatalogView.as_view()),
 ]
