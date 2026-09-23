@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import PartnerPortalBand from '../../components/PartnerPortalBand'
 import PartnersSection from '../../components/PartnersSection'
+import RotatingTagline from '../../components/RotatingTagline'
 
 const PHOTO_STRIP = [
   { src: '/photos/boxes-apples-carrots.jpg', alt: 'Boxes of apples, carrots and potatoes' },
@@ -26,7 +27,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      <div className="green-band green-band-tall" />
+      <RotatingTagline />
 
       <FeatureBlock
         label="Mission"

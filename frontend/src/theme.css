@@ -19,6 +19,7 @@
   /* Fonts */
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'Heebo', Arial, Helvetica, sans-serif;
+  --font-menu: 'Noto Serif', 'Droid Serif', Georgia, serif; /* the live site's menu font */
 
   /* Sizes */
   --tap: 48px;           /* smallest thing anyone should have to tap */

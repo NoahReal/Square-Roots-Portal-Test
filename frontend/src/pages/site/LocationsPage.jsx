@@ -127,17 +127,21 @@ export default function LocationsPage() {
       </section>
 
       {highlights.length > 0 && (
-        <section className="highlights" style={{ backgroundImage: 'url(/photos/brussels-sprouts.jpg)' }}>
-          <div className="container">
+        <>
+          <div className="highlights-heading container">
             <h2>Location Highlights</h2>
-            {highlights.map((site) => (
-              <div key={site.id} className="highlight-card">
-                <h3>{site.name}</h3>
-                <p>{site.highlight}</p>
-              </div>
-            ))}
           </div>
-        </section>
+          <section className="highlights" style={{ backgroundImage: 'url(/photos/brussels-sprouts.jpg)' }}>
+            <div className="container">
+              {highlights.map((site) => (
+                <div key={site.id} className="highlight-card">
+                  <h3>{site.name}</h3>
+                  <p>{site.highlight}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
       <section className="host-cta">
