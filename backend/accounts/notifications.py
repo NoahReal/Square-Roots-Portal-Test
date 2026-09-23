@@ -1,8 +1,8 @@
 """Emails the portal would send.
 
-This prototype doesn't send real email: Django's console email backend
-(see MAILERS in settings.py) prints each email in the terminal running
-`manage.py runserver` instead. To send real email later, change that setting.
+This prototype doesn't send real email: each email is printed, as readable text,
+in the terminal running `manage.py runserver` (see accounts/email_backend.py and
+MAILERS in settings.py). To send real email later, change that setting.
 """
 
 from django.conf import settings

@@ -6,7 +6,6 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import User
-
 from drops.models import Site
 from .models import ContactMessage, Event
 
