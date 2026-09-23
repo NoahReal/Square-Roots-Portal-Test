@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../../../api'
 import PageHero from '../../../components/PageHero'
 
-const EMPTY = { name: '', address: '', instagram_url: '', facebook_url: '', highlight: '' }
+const EMPTY = { name: '', address: '', instagram_url: '', facebook_url: '', highlight: '', delivery_partner: '', first_drop_pricing: true }
 
 // Admin screen: the Square Roots locations shown on the website and used for drops.
 export default function LocationsPage() {
@@ -103,6 +103,7 @@ function LocationSummary({ location, onEdit, onToggle }) {
         <span className="muted"> · {location.drops_this_year} drops this year</span>
       </p>
       {location.highlight && <p className="produce-notes">Highlight: {location.highlight}</p>}
+      {location.delivery_partner && <p className="muted">Home delivery by {location.delivery_partner}</p>}
       <div className="button-row">
         <button className="btn btn-small" onClick={onEdit}>
           Edit
@@ -122,10 +123,15 @@ function LocationForm({ initial, submitLabel, onSave, onSaved, onCancel }) {
     instagram_url: initial.instagram_url,
     facebook_url: initial.facebook_url,
     highlight: initial.highlight,
+    delivery_partner: initial.delivery_partner,
+    first_drop_pricing: initial.first_drop_pricing,
   })
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
-  const update = (event) => setForm({ ...form, [event.target.name]: event.target.value })
+  const update = (event) => {
+    const { name, type, checked, value } = event.target
+    setForm({ ...form, [name]: type === 'checkbox' ? checked : value })
+  }
   const idFor = (name) => `loc-${initial.id ?? 'new'}-${name}`
 
   async function handleSubmit(event) {
@@ -158,6 +164,11 @@ function LocationForm({ initial, submitLabel, onSave, onSaved, onCancel }) {
       {field('instagram_url', 'Instagram link', 'optional', { type: 'url', placeholder: 'https://www.instagram.com/…' })}
       {field('facebook_url', 'Facebook link', 'optional', { type: 'url', placeholder: 'https://www.facebook.com/…' })}
       {field('highlight', 'Highlight on the website', 'optional, e.g. “Our newest location”')}
+      {field('delivery_partner', 'Home delivery partner', 'optional, e.g. BayRides; leave blank if there’s no delivery')}
+      <label className="check">
+        <input type="checkbox" name="first_drop_pricing" checked={form.first_drop_pricing} onChange={update} />
+        New location: charge the first-drop price at its first drop
+      </label>
       <div className="button-row">
         <button className="btn btn-primary" disabled={busy}>
           {busy ? 'Saving…' : submitLabel}

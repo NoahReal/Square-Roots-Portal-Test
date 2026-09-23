@@ -41,6 +41,9 @@ import ManagerHomePage from './pages/portal/manager/ManagerHomePage'
 import FarmHomePage from './pages/portal/farm/FarmHomePage'
 import AdminLocationsPage from './pages/portal/admin/LocationsPage'
 import AdminEventsPage from './pages/portal/admin/EventsPage'
+import MoneyPage from './pages/portal/admin/MoneyPage'
+import PackingPage from './pages/portal/admin/PackingPage'
+import SettingsPage from './pages/portal/admin/SettingsPage'
 
 // Only lets an approved, logged-in user with the right role through.
 function RequireRole({ role }) {
@@ -64,6 +67,9 @@ const PAGES = {
   '/portal/admin/people': PeoplePage,
   '/portal/admin/locations': AdminLocationsPage,
   '/portal/admin/events': AdminEventsPage,
+  '/portal/admin/money': MoneyPage,
+  '/portal/admin/packing': PackingPage,
+  '/portal/admin/settings': SettingsPage,
   '/portal/manager/order': OrderPage,
   '/portal/manager/preorders': PreordersPage,
   '/portal/manager/after-drop': AfterDropPage,

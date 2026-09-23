@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../../api'
 import { useAuth } from '../../../auth'
-import { longDate, timeRange } from '../../../format'
+import { longDate, money, timeRange } from '../../../format'
+import { usePricing } from '../../../pricing'
 import PageHero from '../../../components/PageHero'
 import Stepper from '../../../components/Stepper'
 
@@ -114,7 +115,7 @@ export default function PreordersPage() {
               <div className="preorder-layout">
                 <div className="block block-white">
                   <h2>Add a preorder</h2>
-                  <AddPreorderForm onAdd={add} />
+                  <AddPreorderForm key={dropId} drop={drop} onAdd={add} />
                 </div>
 
                 <div>
@@ -156,10 +157,20 @@ function Tile({ label, value }) {
   )
 }
 
-function AddPreorderForm({ onAdd }) {
+const TIERS = [
+  { value: 'standard', label: 'Standard', priceKey: 'standard_price' },
+  { value: 'at_cost', label: 'At cost', priceKey: 'at_cost_price' },
+  { value: 'free', label: 'Free' },
+]
+
+function AddPreorderForm({ drop, onAdd }) {
+  const pricing = usePricing()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [bundles, setBundles] = useState(1)
+  const [tier, setTier] = useState('standard')
+  const [delivery, setDelivery] = useState(false)
+  const [address, setAddress] = useState('')
   const [error, setError] = useState('')
 
   async function handleSubmit(event) {
@@ -168,14 +179,22 @@ function AddPreorderForm({ onAdd }) {
       setError("Please add the customer's name.")
       return
     }
+    if (delivery && !address.trim()) {
+      setError('Add the address to deliver to.')
+      return
+    }
     try {
-      await onAdd({ customer_name: name, phone, bundles })
+      await onAdd({ customer_name: name, phone, bundles, price_tier: tier, delivery, delivery_address: delivery ? address : '' })
       setName('')
       setPhone('')
       setBundles(1)
+      setTier('standard')
+      setDelivery(false)
+      setAddress('')
       setError('')
     } catch (err) {
-      setError([].concat(err.data?.customer_name ?? err.data?.bundles ?? err.message).join(' '))
+      const data = err.data || {}
+      setError([].concat(data.customer_name ?? data.bundles ?? data.delivery ?? data.delivery_address ?? err.message).join(' '))
     }
   }
 
@@ -195,6 +214,39 @@ function AddPreorderForm({ onAdd }) {
         <label htmlFor="customer-bundles">Bundles</label>
         <Stepper id="customer-bundles" value={bundles} onChange={setBundles} min={1} max={20} size="small" label="bundles" />
       </div>
+      <fieldset className="choice-group choice-row">
+        <legend>Price</legend>
+        {TIERS.map((option) => (
+          <label key={option.value} className={'choice' + (tier === option.value ? ' choice-on' : '')}>
+            <input type="radio" name="price-tier" checked={tier === option.value} onChange={() => setTier(option.value)} />
+            {option.label}
+            {pricing && option.priceKey && ` ${money(pricing[option.priceKey])}`}
+          </label>
+        ))}
+      </fieldset>
+      {drop?.delivery_partner && (
+        <div className="field">
+          <label className="check">
+            <input type="checkbox" checked={delivery} onChange={(e) => setDelivery(e.target.checked)} />
+            Home delivery with {drop.delivery_partner}
+            {pricing && ` (${money(pricing.delivery_fee)} fee)`}
+          </label>
+          {delivery && (
+            <>
+              <label htmlFor="customer-address" className="visually-hidden">
+                Delivery address
+              </label>
+              <input
+                id="customer-address"
+                placeholder="Delivery address"
+                autoComplete="street-address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+              />
+            </>
+          )}
+        </div>
+      )}
       {error && <p className="field-error">{error}</p>}
       <button className="btn btn-primary btn-block">Add preorder</button>
     </form>
@@ -207,6 +259,11 @@ function PreorderRow({ preorder, onUpdate, onRemove }) {
     <li className={'preorder' + (preorder.picked_up ? ' preorder-done' : '')}>
       <div className="preorder-who">
         <strong>{preorder.customer_name}</strong>
+        <span className="preorder-badges">
+          {preorder.price_tier !== 'standard' && <span className="tag">{preorder.price_tier_label}</span>}
+          {preorder.delivery && <span className="tag tag-waiting">Delivery</span>}
+        </span>
+        {preorder.delivery && <span className="muted">Deliver to {preorder.delivery_address}</span>}
         <span className="muted">
           {preorder.bundles} {preorder.bundles === 1 ? 'bundle' : 'bundles'}
           {preorder.phone && (

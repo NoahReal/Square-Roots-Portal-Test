@@ -48,6 +48,15 @@ function todos(data) {
   const items = []
   const cycle = data.open_cycle ?? data.next_cycle
 
+  for (const batch of data.orders_to_send) {
+    items.push({
+      count: batch.count,
+      title: `Send the ${batch.cycle_name} orders to farms`,
+      detail: 'Ordering has closed, so the numbers are final. Farms get one order to prepare.',
+      to: `/portal/admin/orders?cycle=${batch.cycle_id}`,
+      action: 'Send',
+    })
+  }
   if (data.signups_waiting) {
     items.push({
       count: data.signups_waiting,
@@ -93,6 +102,15 @@ function todos(data) {
       detail: data.unpaid_farm_orders.map((o) => `${o.farm}, ${o.cycle_name}: ${money(o.total)}`).join('; '),
       to: `/portal/admin/orders?cycle=${data.unpaid_farm_orders[0].cycle_id}`,
       action: 'Mark paid',
+    })
+  }
+  if (data.remittances_outstanding.count) {
+    items.push({
+      count: data.remittances_outstanding.count,
+      title: `Payments from Community Managers not received (${money(data.remittances_outstanding.total)})`,
+      detail: 'What they owe Square Roots for drops they have logged.',
+      to: '/portal/admin/money',
+      action: 'See money',
     })
   }
   if (data.reports_missing.length) {

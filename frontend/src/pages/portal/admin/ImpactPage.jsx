@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../../api'
-import { pounds, shortDate } from '../../../format'
+import { money, pounds, shortDate } from '../../../format'
 import PageHero from '../../../components/PageHero'
 
 // Admin screen: what Square Roots achieved this year, with a spreadsheet download.
@@ -51,6 +51,13 @@ export default function ImpactPage() {
                 <HeroNumber value={totals.bundles_sold.toLocaleString('en-CA')} label="bundles sold to communities" />
                 <HeroNumber value={totals.sites_active} label="locations active" />
                 <HeroNumber value={totals.drops_held} label="drops held" />
+              </div>
+
+              <div className="sliding-scale-tiles">
+                <HeroNumber value={totals.bundles_free.toLocaleString('en-CA')} label="free bundles for people facing food insecurity" />
+                <HeroNumber value={totals.bundles_at_cost.toLocaleString('en-CA')} label="bundles at cost" />
+                <HeroNumber value={money(totals.donations)} label="in donations" />
+                <HeroNumber value={money(totals.paid_to_farms)} label="paid to local farms" />
               </div>
 
               {data.reports_missing > 0 && (

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../../api'
 import { useAuth } from '../../../auth'
-import { dateAndTime, longDate, pounds, shortDate, timeLeft, timeRange } from '../../../format'
+import { dateAndTime, longDate, money, pounds, shortDate, timeLeft, timeRange } from '../../../format'
 import PageHero from '../../../components/PageHero'
 import { ScreenCards, TodoList } from '../../../components/Dashboard'
 
@@ -30,6 +30,17 @@ export default function ManagerHomePage() {
       detail: `Order by ${dateAndTime(drop.order_cutoff)} (${timeLeft(drop.order_cutoff)})`,
       to: '/portal/manager/order',
       action: 'Order now',
+    })
+  }
+  const unpaid = drops?.filter((d) => d.statement && Number(d.statement.owed_to_square_roots) > 0 && !d.statement.remittance_received_on) ?? []
+  if (unpaid.length) {
+    const total = unpaid.reduce((sum, d) => sum + Number(d.statement.owed_to_square_roots), 0)
+    items.push({
+      count: unpaid.length,
+      title: `Pay Square Roots ${money(total)}`,
+      detail: `For ${unpaid.map((d) => d.cycle_name).join(', ')}. The team will mark it received.`,
+      to: '/portal/manager/after-drop',
+      action: 'See statement',
     })
   }
   if (toLog.length) {

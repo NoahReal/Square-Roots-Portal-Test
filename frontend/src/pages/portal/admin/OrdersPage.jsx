@@ -54,9 +54,14 @@ export default function OrdersPage() {
           <div className="toolbar">
             <CyclePicker cycles={cycles} chosen={chosen} onChoose={choose} />
             {detail && (
-              <button className="btn btn-small no-print" onClick={() => window.print()}>
-                Print purchase lists
-              </button>
+              <div className="button-row no-print">
+                <Link className="btn btn-small" to={`/portal/admin/packing?cycle=${detail.id}`}>
+                  Packing & Delivery sheet
+                </Link>
+                <button className="btn btn-small" onClick={() => window.print()}>
+                  Print purchase lists
+                </button>
+              </div>
             )}
           </div>
           {error && <div className="notice notice-error">{error}</div>}
@@ -64,6 +69,24 @@ export default function OrdersPage() {
 
           {detail && (
             <>
+              {detail.unsent_farm_orders > 0 && (
+                <div className={'send-bar no-print' + (detail.ordering_open ? '' : ' send-bar-ready')}>
+                  <p>
+                    <strong>
+                      {detail.unsent_farm_orders} farm {detail.unsent_farm_orders === 1 ? 'order is' : 'orders are'} not sent yet.
+                    </strong>{' '}
+                    {detail.ordering_open
+                      ? 'Farms get one order once ordering closes, so they see the final numbers.'
+                      : 'Ordering has closed, so the numbers are final.'}
+                  </p>
+                  <button
+                    className={'btn btn-small' + (detail.ordering_open ? '' : ' btn-primary')}
+                    onClick={() => run(() => api(`/admin/cycles/${detail.id}/send-to-farms/`, { method: 'POST' }))}
+                  >
+                    Send orders to farms
+                  </button>
+                </div>
+              )}
               <p className="cycle-dates">
                 <strong>{longDate(detail.drop_date)}</strong> · ordering{' '}
                 {detail.ordering_open ? `closes ${dateAndTime(detail.order_cutoff)}` : `closed ${dateAndTime(detail.order_cutoff)}`}
@@ -157,7 +180,8 @@ function Tile({ label, value, alert }) {
 }
 
 function FarmOrderCard({ order, onRun }) {
-  const tag = STATUS_TAGS[order.status]
+  // Drafts haven't been sent to the farm yet, so "waiting for farm" would be misleading.
+  const tag = order.sent_at ? STATUS_TAGS[order.status] : { text: 'Draft: not sent', className: '' }
   const beforePickup = new Date(order.pickup_at) > new Date()
   const totalPounds = order.lines.reduce((sum, line) => sum + line.pounds, 0)
 

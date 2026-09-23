@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api'
-import { longDate, timeRange } from '../../format'
+import { longDate, money, timeRange } from '../../format'
+import { usePricing } from '../../pricing'
 import { FacebookIcon, InstagramIcon } from '../../components/Icons'
 
 // Drop dates come from the drop cycles in the portal, grouped by month like the
@@ -31,6 +32,7 @@ export default function LocationsPage() {
     api('/drop-dates/').then(setDropDates).catch(() => setDropDates(null))
   }, [])
 
+  const pricing = usePricing()
   const highlights = sites?.filter((site) => site.highlight) ?? []
 
   return (
@@ -55,6 +57,36 @@ export default function LocationsPage() {
           </div>
         </div>
       </section>
+
+      {pricing && (
+        <section className="pricing-band">
+          <div className="container pricing-inner">
+            <h2>Pay what works for you</h2>
+            <p>Every bundle is 10 lbs of fresh local produce.</p>
+            <ul className="price-list">
+              <li>
+                <strong>{money(pricing.standard_price)}</strong>
+                <span>Pay it forward: helps cover bundles for neighbours who need them</span>
+              </li>
+              <li>
+                <strong>{money(pricing.at_cost_price)}</strong>
+                <span>At cost, if money is tight</span>
+              </li>
+              <li>
+                <strong>Free</strong>
+                <span>For people facing food insecurity. Ask your Community Manager.</span>
+              </li>
+            </ul>
+            {pricing.delivery.length > 0 && (
+              <p className="delivery-note">
+                Home delivery is available{' '}
+                {pricing.delivery.map((d) => `in ${d.site} with ${d.partner}`).join(', ')} for{' '}
+                {money(pricing.delivery_fee)}.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="find-location">
         <div className="container">

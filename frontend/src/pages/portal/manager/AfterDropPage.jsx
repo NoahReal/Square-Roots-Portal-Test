@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../../api'
 import { useAuth } from '../../../auth'
-import { longDate, pounds } from '../../../format'
+import { longDate, money, pounds, shortDate } from '../../../format'
+import { usePricing } from '../../../pricing'
 import PageHero from '../../../components/PageHero'
 import Stepper from '../../../components/Stepper'
 
@@ -90,12 +91,14 @@ function ReportCard({ drop, onSaved, startOpen = false }) {
       ) : (
         <div className="report-summary">
           <p>
-            Sold <strong>{report.bundles_sold}</strong> of {drop.bundles} bundles ({pounds(report.bundles_sold * 10)})
+            Sold <strong>{report.bundles_sold}</strong> of {drop.bundles} bundles ({pounds(report.bundles_sold * 10)}):{' '}
+            {report.bundles_standard} standard, {report.bundles_at_cost} at cost, {report.bundles_free} free.
             {report.bundles_left_over > 0
-              ? `. ${report.bundles_left_over} left over: ${report.leftovers_label.toLowerCase()}.`
-              : '. Nothing left over.'}
+              ? ` ${report.bundles_left_over} left over: ${report.leftovers_label.toLowerCase()}.`
+              : ' Nothing left over.'}
           </p>
           {report.notes && <p className="produce-notes">{report.notes}</p>}
+          {drop.statement && <Statement statement={drop.statement} />}
           <button className="btn btn-small" onClick={() => setEditing(true)}>
             Edit
           </button>
@@ -105,19 +108,65 @@ function ReportCard({ drop, onSaved, startOpen = false }) {
   )
 }
 
+// Money for one drop: what was collected, what's owed to Square Roots, and what the Community Manager keeps.
+function Statement({ statement }) {
+  const received = statement.remittance_received_on
+  return (
+    <div className="statement">
+      <dl>
+        <div>
+          <dt>Collected</dt>
+          <dd>{money(statement.collected)}</dd>
+        </div>
+        <div>
+          <dt>Owed to Square Roots</dt>
+          <dd>{money(statement.owed_to_square_roots)}</dd>
+        </div>
+        <div>
+          <dt>You keep</dt>
+          <dd>{money(statement.manager_keeps)}</dd>
+        </div>
+      </dl>
+      <p className="statement-note">
+        {statement.first_drop
+          ? `First drop: you owe just ${money(statement.cost_per_bundle)} per paid bundle. `
+          : `You owe ${money(statement.cost_per_bundle)} per paid bundle; free bundles cost you nothing. `}
+        {Number(statement.donations) > 0 && `Includes ${money(statement.donations)} in donations, which you keep. `}
+        {Number(statement.owed_to_square_roots) === 0
+          ? 'Nothing to pay.'
+          : received
+            ? `Payment received ${shortDate(received)}. Thank you!`
+            : 'Payment not received yet.'}
+      </p>
+    </div>
+  )
+}
+
 function ReportForm({ drop, onSaved, onCancel }) {
   const existing = drop.report
-  const [sold, setSold] = useState(existing?.bundles_sold ?? drop.bundles)
+  const pricing = usePricing()
+  // Bundles sold at each price. Starts with every bundle at the standard price; change the split to match the day.
+  const [tiers, setTiers] = useState({
+    standard: existing?.bundles_standard ?? drop.bundles,
+    atCost: existing?.bundles_at_cost ?? 0,
+    free: existing?.bundles_free ?? 0,
+  })
+  const [donations, setDonations] = useState(existing ? String(Number(existing.donations)) : '0')
   const [leftOver, setLeftOver] = useState(existing?.bundles_left_over ?? 0)
   const [leftoversWentTo, setLeftoversWentTo] = useState(existing?.leftovers_went_to ?? 'none')
   const [notes, setNotes] = useState(existing?.notes ?? '')
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
 
-  // Changing "sold" suggests the rest were left over, which is usually right.
-  function changeSold(value) {
-    setSold(value)
-    setLeftOver(Math.max(0, drop.bundles - value))
+  const sold = tiers.standard + tiers.atCost + tiers.free
+
+  // Changing a number sold also suggests the rest were left over, which is usually right.
+  function changeTier(name) {
+    return (value) => {
+      const next = { ...tiers, [name]: value }
+      setTiers(next)
+      setLeftOver(Math.max(0, drop.bundles - next.standard - next.atCost - next.free))
+    }
   }
 
   async function save() {
@@ -127,7 +176,15 @@ function ReportForm({ drop, onSaved, onCancel }) {
     try {
       const updated = await api(`/manager/drops/${drop.id}/report/`, {
         method: 'PUT',
-        body: { bundles_sold: sold, bundles_left_over: leftOver, leftovers_went_to: destination, notes },
+        body: {
+          bundles_standard: tiers.standard,
+          bundles_at_cost: tiers.atCost,
+          bundles_free: tiers.free,
+          bundles_left_over: leftOver,
+          leftovers_went_to: destination,
+          donations: donations || '0',
+          notes,
+        },
       })
       onSaved(updated)
     } catch (err) {
@@ -141,14 +198,46 @@ function ReportForm({ drop, onSaved, onCancel }) {
   return (
     <div className="report-form">
       {errors.detail && <div className="notice notice-error">{errors.detail}</div>}
-      <div className="field-row">
+      <fieldset className="tier-fields">
+        <legend>Bundles sold ({sold} of {drop.bundles})</legend>
         <div className="field">
-          <label htmlFor={id('sold')}>Bundles sold</label>
-          <Stepper id={id('sold')} value={sold} onChange={changeSold} max={300} size="small" label="bundles sold" />
+          <label htmlFor={id('standard')}>Standard {pricing && `(${money(pricing.standard_price)})`}</label>
+          <Stepper id={id('standard')} value={tiers.standard} onChange={changeTier('standard')} max={300} size="small" label="standard bundles" />
         </div>
+        <div className="field">
+          <label htmlFor={id('at-cost')}>At cost {pricing && `(${money(pricing.at_cost_price)})`}</label>
+          <Stepper id={id('at-cost')} value={tiers.atCost} onChange={changeTier('atCost')} max={300} size="small" label="at-cost bundles" />
+        </div>
+        <div className="field">
+          <label htmlFor={id('free')}>Free</label>
+          <Stepper id={id('free')} value={tiers.free} onChange={changeTier('free')} max={300} size="small" label="free bundles" />
+        </div>
+      </fieldset>
+      {sold > drop.bundles && (
+        <p className="text-warning">
+          That's {sold - drop.bundles} more than the {drop.bundles} you ordered. That's fine if you had some kept from last
+          time; otherwise check the numbers.
+        </p>
+      )}
+      <div className="field-row">
         <div className="field">
           <label htmlFor={id('left')}>Bundles left over</label>
           <Stepper id={id('left')} value={leftOver} onChange={setLeftOver} max={300} size="small" label="bundles left over" />
+        </div>
+        <div className="field">
+          <label htmlFor={id('donations')}>
+            Donations ($) <span className="field-hint">(if any)</span>
+          </label>
+          <input
+            id={id('donations')}
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={donations}
+            onChange={(e) => setDonations(e.target.value)}
+          />
+          {errors.donations && <p className="field-error">{[].concat(errors.donations).join(' ')}</p>}
         </div>
       </div>
 
