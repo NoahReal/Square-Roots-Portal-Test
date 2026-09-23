@@ -38,9 +38,9 @@ class PreorderSerializer(serializers.ModelSerializer):
         fields = [
             "id", "customer_name", "phone", "email", "bundles", "price_tier", "price_tier_label",
             "delivery", "delivery_address", "paid", "picked_up", "source", "pickup_code", "amount_due",
-            "pay_it_forward", "every_drop",
+            "pay_it_forward", "every_drop", "language",
         ]
-        read_only_fields = ["source", "pickup_code"]
+        read_only_fields = ["source", "pickup_code", "language"]
         extra_kwargs = {
             "customer_name": {"error_messages": {"blank": "Please add the customer's name."}},
             "bundles": {"error_messages": {"invalid": "Enter a number of bundles, like 2."}},

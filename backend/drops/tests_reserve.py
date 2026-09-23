@@ -252,3 +252,99 @@ class NoticeTests(ReserveTestCase):
         self.assertEqual(response.data["phone_only"], [{"customer_name": "Pat D.", "phone": "902-555-0199"}])
         self.assertIn("moving indoors", mail.outbox[0].body)
         self.assertEqual(self.cm.post(f"/api/manager/drops/{self.drop.id}/message/", {"message": " "}, format="json").status_code, 400)
+
+
+class FrenchTests(ReserveTestCase):
+    def test_french_customers_get_french_emails(self):
+        self.reserve(language="fr", bundles=2, pay_it_forward="2.50")
+        email = mail.outbox[0]
+        self.assertEqual(email.subject, "[Square Roots] Votre panier est réservé")
+        self.assertIn("Bonjour Alex B.", email.body)
+        self.assertIn("2 paniers", email.body)
+        self.assertIn("22,50 $", email.body)
+        self.assertIn(" h", email.body)  # times like "11 h"
+
+    def test_notices_use_each_customers_language(self):
+        self.reserve(language="fr")
+        self.reserve(email="sam@example.com")
+        mail.outbox.clear()
+        self.team.delete(f"/api/admin/site-drops/{self.drop.id}/")
+        by_person = {m.to[0]: m.subject for m in mail.outbox}
+        self.assertIn("annulée", by_person["alex@example.com"])
+        self.assertIn("cancelled", by_person["sam@example.com"])
+
+
+class BundleContentsTests(ReserveTestCase):
+    def setUp(self):
+        super().setUp()
+        from django.utils import timezone
+        from farms.models import Farm, FarmOrder, FarmOrderLine
+        from .models import BundleOrder
+
+        BundleOrder.objects.create(site_drop=self.drop, bundles=20)
+        farm = Farm.objects.create(name="Canard Creek Farm", location="Canard")
+        self.order = FarmOrder.objects.create(farm=farm, drop_cycle=self.drop.cycle, pickup_at=timezone.now())
+        FarmOrderLine.objects.create(order=self.order, produce="Carrots", pounds=50, price_per_pound="0.35")
+        FarmOrderLine.objects.create(order=self.order, produce="Apples", pounds=30, price_per_pound="0.55")
+        self.timezone = timezone
+
+    def test_nothing_is_shown_until_the_farm_orders_are_sent(self):
+        self.assertEqual(self.reserve().data["bundle"], [])
+        self.assertEqual(self.public.get("/api/bundle/").data["items"], [])
+
+    def test_items_with_their_farms_and_pounds_per_bundle(self):
+        self.order.sent_at = self.timezone.now()
+        self.order.save()
+        items = self.public.get("/api/bundle/").data["items"]
+        self.assertEqual(items[0], {"produce": "Carrots", "pounds_per_bundle": 2.5, "farms": [{"name": "Canard Creek Farm", "location": "Canard"}]})
+        self.assertEqual(items[1]["pounds_per_bundle"], 1.5)
+
+
+class HostReservationTests(ReserveTestCase):
+    def setUp(self):
+        super().setUp()
+        from accounts.models import User
+        from .tests import client_for
+
+        self.host_user = User.objects.create_user("host.test", role=User.Role.HOST_SITE, site=self.site)
+        self.host = client_for(self.host_user)
+
+    def test_host_reserves_for_someone_without_contact_details(self):
+        response = self.host.post(
+            "/api/host/reservations/", {"site_drop": self.drop.id, "customer_name": "M.K.", "bundles": 2, "price_tier": "free"}, format="json"
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["amount_due"], "0.00")
+        preorder = Preorder.objects.get()
+        self.assertEqual((preorder.source, preorder.reserved_by, preorder.email), ("host", self.host_user, ""))
+        listed = self.host.get("/api/host/reservations/").data["drops"][0]
+        self.assertEqual((listed["bundles_left"], listed["reservations"][0]["pickup_code"]), (3, preorder.pickup_code))
+        # It's on the Community Manager's list like any other reservation.
+        self.assertEqual(self.cm.get(f"/api/manager/drops/{self.drop.id}/preorders/").data[0]["source"], "host")
+
+    def test_host_cannot_go_over_what_is_left_or_use_another_location(self):
+        response = self.host.post(
+            "/api/host/reservations/", {"site_drop": self.drop.id, "customer_name": "A", "bundles": 4, "price_tier": "free"}, format="json"
+        )
+        self.assertEqual(response.status_code, 201)
+        response = self.host.post(
+            "/api/host/reservations/", {"site_drop": self.drop.id, "customer_name": "B", "bundles": 2, "price_tier": "free"}, format="json"
+        )
+        self.assertIn("Only 1 bundle is left", str(response.data["bundles"]))
+        other = make_drop(self.other_site, 10)
+        response = self.host.post(
+            "/api/host/reservations/", {"site_drop": other.id, "customer_name": "C", "bundles": 1, "price_tier": "free"}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_host_cancels_and_the_waitlist_moves_up(self):
+        made = self.host.post(
+            "/api/host/reservations/", {"site_drop": self.drop.id, "customer_name": "A", "bundles": 5, "price_tier": "free"}, format="json"
+        )
+        self.assertEqual(made.status_code, 400)  # over the per-person limit
+        made = self.host.post(
+            "/api/host/reservations/", {"site_drop": self.drop.id, "customer_name": "A", "bundles": 4, "price_tier": "free"}, format="json"
+        ).data
+        self.reserve(bundles=3, join_waitlist=True)
+        self.host.delete(f"/api/host/reservations/{made['id']}/")
+        self.assertEqual(Preorder.objects.get().customer_name, "Alex B.")

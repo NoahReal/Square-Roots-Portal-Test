@@ -147,6 +147,13 @@ def new_manage_token():
     return secrets.token_urlsafe(24)
 
 
+class Language(models.TextChoices):
+    """Languages customers can use the Reserve pages and get their emails in."""
+
+    ENGLISH = "en", "English"
+    FRENCH = "fr", "Français"
+
+
 class PriceTier(models.TextChoices):
     """The sliding scale: customers choose what works for them, no questions asked."""
 
@@ -171,6 +178,7 @@ class StandingReservation(models.Model):
     pay_it_forward = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
     delivery = models.BooleanField(default=False)
     delivery_address = models.CharField(max_length=200, blank=True)
+    language = models.CharField(max_length=5, choices=Language.choices, default=Language.ENGLISH)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -188,6 +196,7 @@ class Preorder(models.Model):
     class Source(models.TextChoices):
         MANAGER = "manager", "Added by the Community Manager"
         ONLINE = "online", "Reserved online"
+        HOST = "host", "Reserved by the host site"
 
     site_drop = models.ForeignKey(SiteDrop, on_delete=models.CASCADE, related_name="preorders")
     customer_name = models.CharField(max_length=100)
@@ -201,6 +210,11 @@ class Preorder(models.Model):
     pay_it_forward = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
     # Set when this was made automatically from a "reserve every drop" request.
     standing = models.ForeignKey(StandingReservation, null=True, blank=True, on_delete=models.SET_NULL, related_name="preorders")
+    # Set when a host site reserved on someone's behalf (e.g. a community centre for a client).
+    reserved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="reservations_made"
+    )
+    language = models.CharField(max_length=5, choices=Language.choices, default=Language.ENGLISH)
     paid = models.BooleanField(default=False)
     picked_up = models.BooleanField(default=False)
     source = models.CharField(max_length=16, choices=Source.choices, default=Source.MANAGER)
@@ -241,6 +255,7 @@ class WaitlistEntry(models.Model):
     delivery_address = models.CharField(max_length=200, blank=True)
     pay_it_forward = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
     standing = models.ForeignKey(StandingReservation, null=True, blank=True, on_delete=models.SET_NULL, related_name="waitlist_entries")
+    language = models.CharField(max_length=5, choices=Language.choices, default=Language.ENGLISH)
     manage_token = models.CharField(max_length=40, db_index=True, default=new_manage_token)
     created_at = models.DateTimeField(auto_now_add=True)
 

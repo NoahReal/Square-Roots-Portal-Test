@@ -186,8 +186,7 @@ class MessageCustomersView(APIView):
         if len(message) > 2000:
             raise ValidationError({"message": "Please keep the message under 2,000 characters."})
         emailed, phone_only = notify_customers(
-            site_drop, f"A message about your Square Roots {site_drop.site.name} drop",
-            f"{message}\n\n{request.user.get_full_name() or 'Your Community Manager'}, Square Roots {site_drop.site.name}",
-            site_url(request),
+            site_drop, site_url(request), "message_subject",
+            message=f"{message}\n\n{request.user.get_full_name() or 'Community Manager'}, Square Roots {site_drop.site.name}",
         )
         return Response({"emailed": emailed, "phone_only": phone_only})

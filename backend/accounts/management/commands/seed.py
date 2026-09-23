@@ -405,6 +405,18 @@ class Command(BaseCommand):
                 **details,
             )
             reserved += bundles
+        # Dartmouth's host site has reserved for two people it supports, and one customer uses French.
+        if site_drop.site.name == "Dartmouth":
+            host = site_drop.site.people.filter(role=User.Role.HOST_SITE).first()
+            for name, bundles in [("M.K.", 1), ("Community lunch table", 2)]:
+                Preorder.objects.create(
+                    site_drop=site_drop, customer_name=name, bundles=bundles, price_tier="free",
+                    source=Preorder.Source.HOST, reserved_by=host,
+                )
+            Preorder.objects.create(
+                site_drop=site_drop, customer_name="Émilie L.", email="emilie.l@example.com", bundles=1,
+                source=Preorder.Source.ONLINE, manage_token=new_manage_token(), language="fr",
+            )
         if full:
             for name in customers[:2]:
                 WaitlistEntry.objects.create(

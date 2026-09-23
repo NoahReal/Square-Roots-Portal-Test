@@ -9,11 +9,14 @@ urlpatterns = [
     path("pricing/", views.PricingView.as_view()),
     # Customers reserving bundles (public, no account)
     path("reserve/options/", views_reserve.ReserveOptionsView.as_view()),
+    path("bundle/", views_reserve.BundleView.as_view()),
     path("reserve/", views_reserve.ReserveView.as_view()),
     path("reserve/<str:token>/", views_reserve.ManageReservationView.as_view()),
     path("reserve/<str:token>/every-drop/", views_reserve.EveryDropView.as_view()),
     # Host sites
     path("host/drops/", views.HostDropListView.as_view()),
+    path("host/reservations/", views.HostReservationListView.as_view()),
+    path("host/reservations/<int:pk>/", views.HostReservationDetailView.as_view()),
     # Community Managers
     path("manager/drops/", views_manager.ManagerDropListView.as_view()),
     path("manager/drops/<int:pk>/order/", views_manager.OrderView.as_view()),

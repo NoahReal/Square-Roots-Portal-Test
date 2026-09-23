@@ -13,14 +13,12 @@ tells everyone who reserved.
 import re
 from decimal import Decimal
 
-from django.conf import settings
-from django.core.mail import send_mail
 from django.db.models import Sum
 from django.utils import timezone
 
-from accounts.notifications import friendly_time
 from farms.models import FarmOrder, FarmOrderLine
-from .models import DropReport, OperatingSettings, Preorder, SiteDrop, WaitlistEntry, new_manage_token
+from . import customer_emails
+from .models import BundleOrder, DropReport, OperatingSettings, Preorder, SiteDrop, WaitlistEntry, new_manage_token
 
 # Most households take one or two bundles; this keeps one person from taking a whole drop's worth.
 MAX_BUNDLES_PER_RESERVATION = 4
@@ -71,70 +69,13 @@ def already_reserved(site_drop, email, phone, exclude=None):
     return False
 
 
-def manage_link(token, site_url):
-    return f"{site_url.rstrip('/')}/reserve/manage/{token}"
-
-
-def friendly_date(day):
-    return f"{day:%A, %B} {day.day}"
-
-
-def friendly_clock(moment):
-    hour = moment.hour % 12 or 12
-    return f"{hour}:{moment.minute:02d} {'a.m.' if moment.hour < 12 else 'p.m.'}"
-
-
-def drop_details(site_drop):
-    site = site_drop.site
-    return (
-        f"When: {friendly_date(site_drop.drop_date)}, {friendly_clock(site_drop.starts_at)} to "
-        f"{friendly_clock(site_drop.ends_at)}\n"
-        f"Where: Square Roots {site.name}, {site.address}"
-    )
-
-
-def email_customer(reservation, subject, body):
-    if reservation.email:
-        send_mail(f"[Square Roots] {subject}", body, settings.DEFAULT_FROM_EMAIL, [reservation.email])
-
-
-def send_confirmation(preorder, site_url, subject="Your bundle is reserved", intro=""):
-    how = (
-        f"We'll deliver to {preorder.delivery_address} with {preorder.site_drop.site.delivery_partner}."
-        if preorder.delivery
-        else f"Show this code when you pick up: {preorder.pickup_code}"
-    )
-    email_customer(
-        preorder,
-        subject,
-        f"Hi {preorder.customer_name},\n\n"
-        f"{intro}"
-        f"You've reserved {plural(preorder.bundles, 'bundle')} of fresh Nova Scotia produce.\n\n"
-        f"{drop_details(preorder.site_drop)}\n"
-        f"To pay at the drop: ${amount_due(preorder):.2f}\n\n"
-        f"{how}\n\n"
-        f"Need to change or cancel? You can until {friendly_time(preorder.site_drop.order_cutoff)}:\n"
-        f"{manage_link(preorder.manage_token, site_url)}\n\n"
-        "See you there!\nSquare Roots",
-    )
+def send_confirmation(preorder, site_url, kind="reserved"):
+    """Emails the customer their reservation. `kind` picks the subject: reserved, updated, promoted or standing."""
+    customer_emails.confirmation(preorder, site_url, amount_due(preorder), kind)
 
 
 def send_waitlist_joined(entry, site_url):
-    email_customer(
-        entry,
-        "You're on the waitlist",
-        f"Hi {entry.customer_name},\n\n"
-        f"All the bundles set aside at {entry.site_drop.site.name} have been reserved, so you're on the waitlist "
-        f"for {plural(entry.bundles, 'bundle')}.\n\n"
-        f"{drop_details(entry.site_drop)}\n\n"
-        "If a spot opens up before ordering closes, we'll reserve it for you and email you right away.\n"
-        f"To leave the waitlist: {manage_link(entry.manage_token, site_url)}\n\n"
-        "Square Roots",
-    )
-
-
-def plural(count, word):
-    return f"{count} {word}" if count == 1 else f"{count} {word}s"
+    customer_emails.waitlist_joined(entry, site_url)
 
 
 def promote_waitlist(site_drop, site_url):
@@ -150,13 +91,13 @@ def promote_waitlist(site_drop, site_url):
             site_drop=site_drop, customer_name=entry.customer_name, phone=entry.phone, email=entry.email,
             bundles=entry.bundles, price_tier=entry.price_tier, delivery=entry.delivery,
             delivery_address=entry.delivery_address, source=Preorder.Source.ONLINE,
-            pay_it_forward=entry.pay_it_forward, standing=entry.standing,
+            pay_it_forward=entry.pay_it_forward, standing=entry.standing, language=entry.language,
             # The same link keeps working: it now opens the reservation instead of the waitlist spot.
             manage_token=entry.manage_token,
         )
         entry.delete()
         left -= preorder.bundles
-        send_confirmation(preorder, site_url, subject="Good news: a bundle opened up for you")
+        send_confirmation(preorder, site_url, kind="promoted")
         promoted.append(preorder)
     return promoted
 
@@ -186,17 +127,14 @@ def apply_standing(site_drop, site_url, only=None):
             # Delivery only if the location still offers it.
             "delivery": standing.delivery and bool(site.delivery_partner),
             "delivery_address": standing.delivery_address if site.delivery_partner else "",
+            "language": standing.language,
             "standing": standing,
         }
         if bundles_left(site_drop) >= standing.bundles:
             preorder = Preorder.objects.create(
                 site_drop=site_drop, source=Preorder.Source.ONLINE, manage_token=new_manage_token(), **details
             )
-            send_confirmation(
-                preorder, site_url, subject="We've reserved your next bundle",
-                intro="You asked us to reserve at every drop, so here's your next one. "
-                "To stop, use the link at the bottom.\n\n",
-            )
+            send_confirmation(preorder, site_url, kind="standing")
         else:
             entry = WaitlistEntry.objects.create(site_drop=site_drop, **details)
             send_waitlist_joined(entry, site_url)
@@ -207,41 +145,33 @@ def apply_standing(site_drop, site_url, only=None):
 # ---------- Telling customers about changes ----------
 
 
-def notify_customers(site_drop, subject, message, site_url):
-    """Emails everyone with a reservation or waitlist spot at a drop.
+def notify_customers(site_drop, site_url, subject_key, message_key=None, message=None):
+    """Emails everyone with a reservation or waitlist spot at a drop, each in their own language.
 
-    Returns how many were emailed, and the people who can only be reached by phone.
+    Pass the key of a message in customer_emails.TEXT, or your own `message`. Returns how many
+    were emailed, and the people who can only be reached by phone.
     """
     emailed, phone_only = 0, []
     for person in [*site_drop.preorders.all(), *site_drop.waitlist.all()]:
         if not person.email:
             phone_only.append({"customer_name": person.customer_name, "phone": person.phone})
             continue
-        link = f"Your reservation: {manage_link(person.manage_token, site_url)}\n\n" if person.manage_token else ""
-        email_customer(person, subject, f"Hi {person.customer_name},\n\n{message}\n\n{link}Square Roots")
+        lang = person.language
+        customer_emails.notice(
+            person, site_url, subject_key, message_key, message,
+            site=site_drop.site.name, details=customer_emails.drop_details(site_drop, lang),
+            date=customer_emails.say_date(site_drop.drop_date, lang), reserve_link=f"{site_url.rstrip('/')}/reserve",
+        )
         emailed += 1
     return emailed, phone_only
 
 
 def tell_customers_drop_moved(site_drop, site_url):
-    return notify_customers(
-        site_drop,
-        f"Your Square Roots {site_drop.site.name} drop has changed",
-        f"The {site_drop.site.name} drop you reserved for has a new date or time:\n\n{drop_details(site_drop)}\n\n"
-        "Your reservation is still held. If the new time doesn't work, you can cancel it using the link below.",
-        site_url,
-    )
+    return notify_customers(site_drop, site_url, "moved_subject", "moved")
 
 
 def tell_customers_drop_cancelled(site_drop, site_url):
-    return notify_customers(
-        site_drop,
-        f"Your Square Roots {site_drop.site.name} drop is cancelled",
-        f"We're sorry: the {site_drop.site.name} drop on {friendly_date(site_drop.drop_date)} is cancelled, "
-        f"so your reservation is cancelled too. You won't be charged.\n\n"
-        f"See the next drops and reserve again at {site_url.rstrip('/')}/reserve",
-        site_url,
-    )
+    return notify_customers(site_drop, site_url, "cancelled_subject", "cancelled")
 
 
 # ---------- Pay it forward, and where the money goes ----------
@@ -269,3 +199,39 @@ def farm_cost_per_bundle():
     if not sold or not spent:
         return None
     return spent / sold
+
+
+# ---------- What's in the bundle ----------
+
+
+def bundle_contents(cycle):
+    """What's going into a drop's bundles, once the team has sent the farm orders.
+
+    Each item comes with the farms growing it and roughly how many pounds of it go in each bundle.
+    Returns [] until the orders are sent, since the plan can still change before then.
+    """
+    orders = (
+        FarmOrder.objects.filter(drop_cycle=cycle, sent_at__isnull=False)
+        .exclude(status=FarmOrder.Status.CANT_FILL)
+        .select_related("farm")
+        .prefetch_related("lines")
+    )
+    bundles = BundleOrder.objects.filter(site_drop__cycle=cycle).aggregate(total=Sum("bundles"))["total"] or 0
+    items = {}
+    for order in orders:
+        for line in order.lines.all():
+            item = items.setdefault(line.produce, {"produce": line.produce, "pounds": 0, "farms": {}})
+            item["pounds"] += line.pounds
+            item["farms"][order.farm.name] = order.farm.location
+    result = []
+    for item in sorted(items.values(), key=lambda i: -i["pounds"]):
+        per_bundle = item["pounds"] / bundles if bundles else None
+        result.append(
+            {
+                "produce": item["produce"],
+                # Rounded to the nearest half pound: it's a guide, not a promise.
+                "pounds_per_bundle": round(per_bundle * 2) / 2 if per_bundle else None,
+                "farms": [{"name": name, "location": location} for name, location in sorted(item["farms"].items())],
+            }
+        )
+    return result

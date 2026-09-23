@@ -4,6 +4,7 @@ private link for changing or cancelling it, and a pickup code to show at the dro
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers
@@ -13,9 +14,12 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from .models import OperatingSettings, Preorder, PriceTier, Site, SiteDrop, StandingReservation, WaitlistEntry, new_manage_token
+from .models import (
+    DropCycle, Language, OperatingSettings, Preorder, PriceTier, Site, SiteDrop, StandingReservation, WaitlistEntry,
+    new_manage_token,
+)
 from .reservations import (
-    MAX_BUNDLES_PER_RESERVATION, already_reserved, amount_due, apply_standing, bundles_left, digits,
+    MAX_BUNDLES_PER_RESERVATION, already_reserved, amount_due, apply_standing, bundle_contents, bundles_left, digits,
     farm_cost_per_bundle, pay_it_forward_this_year, promote_waitlist, reservable_drops, send_confirmation,
     send_waitlist_joined, waitlist_position,
 )
@@ -113,6 +117,7 @@ class ReservationSerializer(serializers.Serializer):
     )
     delivery = serializers.BooleanField(default=False)
     delivery_address = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    language = serializers.ChoiceField(choices=Language.choices, required=False)
     pay_it_forward = serializers.DecimalField(
         max_digits=6, decimal_places=2, min_value=Decimal("0"), max_value=Decimal("100"), required=False,
         error_messages={"invalid": "Enter an amount in dollars, like 5.", "max_value": "Thank you! Gifts online are up to $100."},
@@ -186,6 +191,8 @@ def reservation_json(reservation):
         "delivery_address": reservation.delivery_address,
         "pay_it_forward": f"{reservation.pay_it_forward:.2f}",
         "every_drop": reservation.standing_id is not None,
+        "language": reservation.language,
+        "bundle": bundle_contents(site_drop.cycle),
         "amount_due": f"{amount_due(reservation):.2f}",
         "picked_up": False if waiting else reservation.picked_up,
         # Until ordering closes, customers can change or cancel (and add bundles, if any are left).
@@ -306,7 +313,7 @@ class ManageReservationView(APIView):
             reservation.standing.save()
 
         if isinstance(reservation, Preorder):
-            send_confirmation(reservation, site_url(request), subject="Your reservation was updated")
+            send_confirmation(reservation, site_url(request), kind="updated")
             if added < 0:
                 promote_waitlist(site_drop, site_url(request))
         return Response(reservation_json(reservation))
@@ -334,6 +341,7 @@ class EveryDropView(APIView):
         if reservation.standing is None:
             fields = [
                 "customer_name", "phone", "email", "bundles", "price_tier", "pay_it_forward", "delivery", "delivery_address",
+                "language",
             ]
             reservation.standing = StandingReservation.objects.create(
                 site=reservation.site_drop.site, **{field: getattr(reservation, field) for field in fields}
@@ -352,3 +360,17 @@ class EveryDropView(APIView):
             reservation.standing.delete()
             reservation.refresh_from_db()
         return Response(reservation_json(reservation))
+
+
+class BundleView(APIView):
+    """What's in the bundles for the next drop whose farm orders are sent (or the latest one), with the farms. Public."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        today = timezone.localdate()
+        sent = DropCycle.objects.filter(farm_orders__sent_at__isnull=False).distinct()
+        cycle = sent.filter(drop_date__gte=today).order_by("drop_date").first() or sent.order_by("-drop_date").first()
+        if cycle is None:
+            return Response({"drop_date": None, "upcoming": False, "items": []})
+        return Response({"drop_date": cycle.drop_date, "upcoming": cycle.drop_date >= today, "items": bundle_contents(cycle)})
