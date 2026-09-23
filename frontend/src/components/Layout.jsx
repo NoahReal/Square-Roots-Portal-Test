@@ -21,13 +21,16 @@ export default function Layout() {
     <div className={'app' + (showTabs ? ' has-tab-bar' : '')}>
       <header className="site-header">
         <div className="site-header-inner">
-          <Link to={role.home} className="brand">
-            <img src="/square-roots-logo.png" alt="Square Roots" />
+          <div className="brand">
+            {/* The logo is the way back to the main Square Roots website. */}
+            <Link to="/">
+              <img src="/square-roots-logo.png" alt="Square Roots website" />
+            </Link>
             <span className="brand-label">
               Partner Portal
               <small>{role.label}</small>
             </span>
-          </Link>
+          </div>
 
           <nav className="top-nav" aria-label="Main">
             {role.nav.map((item) => (
@@ -38,9 +41,6 @@ export default function Layout() {
           </nav>
 
           <div className="user-menu">
-            <Link to="/" className="main-site-link">
-              Main site
-            </Link>
             <span className="user-menu-name">
               {user.first_name} {user.last_name}
               <small>{user.role_label}</small>

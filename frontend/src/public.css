@@ -844,11 +844,6 @@
   margin-top: 32px;
 }
 
-.main-site-link {
-  display: none;
-  font-size: 0.95rem;
-}
-
 .tabs {
   display: flex;
   flex-wrap: wrap;
@@ -1136,9 +1131,5 @@
   .footer-enactus {
     border-right: 6px solid var(--sr-ink-soft);
     padding-right: 24px;
-  }
-
-  .main-site-link {
-    display: inline;
   }
 }
