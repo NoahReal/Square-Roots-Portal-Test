@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api'
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../demoAccounts'
-import PageHero from '../components/PageHero'
+import { api } from '../../api'
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../demoAccounts'
+import PageHero from '../../components/PageHero'
 
 // Admin-only page: every API endpoint the portal uses, plus tools for testing logins.
 export default function ApiPage() {

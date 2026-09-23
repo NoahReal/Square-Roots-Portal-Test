@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ROLES } from '../roles'
-import Footer from './Footer'
+import SiteFooter from './SiteFooter'
 
 export default function Layout() {
   const { user, logout } = useAuth()
@@ -10,7 +10,7 @@ export default function Layout() {
 
   async function handleLogout() {
     await logout()
-    navigate('/login')
+    navigate('/portal/login')
   }
 
   // Only show the phone tab bar if there's more than one screen to switch between.
@@ -38,6 +38,9 @@ export default function Layout() {
           </nav>
 
           <div className="user-menu">
+            <Link to="/" className="main-site-link">
+              Main site
+            </Link>
             <span className="user-menu-name">
               {user.first_name} {user.last_name}
               <small>{user.role_label}</small>
@@ -54,7 +57,7 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <Footer />
+      <SiteFooter />
 
       {showTabs && (
         <nav className="tab-bar" aria-label="Main">

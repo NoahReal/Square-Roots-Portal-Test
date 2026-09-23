@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
-import { useAuth } from '../auth'
-import { ROLES } from '../roles'
-import PageHero from '../components/PageHero'
+import { useAuth } from '../../auth'
+import { ROLES } from '../../roles'
+import PageHero from '../../components/PageHero'
 
 // Each role's landing page: a welcome, then a block for each of their screens.
-export default function HomePage() {
+export default function PortalHomePage() {
   const { user } = useAuth()
   const role = ROLES[user.role]
   const screens = role.nav.filter((item) => item.to !== role.home)

@@ -5,6 +5,7 @@ import App from './App'
 import { AuthProvider } from './auth'
 import './theme.css'
 import './styles.css'
+import './public.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

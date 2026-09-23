@@ -1,5 +1,5 @@
 // Keeps track of who is logged in. Wrap the app in <AuthProvider>,
-// then call useAuth() in any component to get { user, login, logout }.
+// then call useAuth() in any component to get { user, login, signup, logout }.
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { api } from './api'
@@ -25,13 +25,21 @@ export function AuthProvider({ children }) {
     return loggedIn
   }
 
+  // Sign-up from the website. The server logs the new person in straight away
+  // (their account is pending until an admin approves it).
+  async function signup(form) {
+    const newUser = await api('/signup/', { method: 'POST', body: form })
+    setUser(newUser)
+    return newUser
+  }
+
   async function logout() {
     await api('/auth/logout/', { method: 'POST' })
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, checking, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, checking, login, signup, logout }}>{children}</AuthContext.Provider>
   )
 }
 

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import { useAuth } from '../auth'
-import { homeFor } from '../roles'
-import PageHero from '../components/PageHero'
+import { useAuth } from '../../auth'
+import { homeFor } from '../../roles'
+import PageHero from '../../components/PageHero'
 
 // Placeholder for screens that haven't been built yet.
 export default function ComingSoonPage({ item }) {

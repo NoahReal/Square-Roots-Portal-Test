@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../auth'
-import { homeFor } from '../roles'
-import Footer from '../components/Footer'
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../demoAccounts'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth'
+import { homeFor } from '../../roles'
+import { DEMO_ACCOUNTS, DEMO_PASSWORD, PENDING_DEMO_ACCOUNTS } from '../../demoAccounts'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -33,91 +32,89 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="app">
-      <header className="site-header">
-        <div className="site-header-inner">
-          <span className="brand">
-            <img src="/square-roots-logo.png" alt="Square Roots" />
-            <span className="brand-label">Partner Portal</span>
-          </span>
-        </div>
-      </header>
-      <div className="green-band" />
+    <>
+      <div className="login-split">
+        <section className="login-form-side">
+          <h1>Partner Portal</h1>
+          <p className="lead">For Community Managers, farms, host sites and the Square Roots team.</p>
 
-      <main className="app-main">
-        <div className="login-split">
-          <section className="login-form-side">
-            <h1>Log in</h1>
-            <p className="lead">For Community Managers, farms, host sites and the Square Roots team.</p>
-
-            <form onSubmit={handleSubmit}>
-              {error && (
-                <div className="notice notice-error" role="alert">
-                  {error}
-                </div>
-              )}
-              <div className="field">
-                <label htmlFor="username">Username</label>
-                <input
-                  id="username"
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <div className="notice notice-error" role="alert">
+                {error}
               </div>
-              <div className="field">
-                <label htmlFor="password">Password</label>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <button className="btn btn-primary btn-block" disabled={busy}>
-                {busy ? 'Logging in…' : 'Log in'}
-              </button>
-            </form>
-          </section>
-
-          <section className="login-message-side">
-            <h2>Reducing Food Waste, Increasing Food Security</h2>
-            <p>
-              Square Roots connects perfectly healthy produce that doesn't meet grocery store cosmetic standards
-              with community members across Nova Scotia.
-            </p>
-          </section>
-        </div>
-
-        <section className="section">
-          <div className="container">
-            <h2>Demo accounts</h2>
-            <p className="muted">
-              Tap an account to fill in the form. Every demo password is <strong>{DEMO_PASSWORD}</strong>.
-            </p>
-            <ul className="demo-accounts">
-              {DEMO_ACCOUNTS.map((account) => (
-                <li key={account.username}>
-                  <button type="button" onClick={() => fillDemoAccount(account)}>
-                    <span>
-                      <strong>{account.who}</strong>
-                      <br />
-                      <span className="muted">{account.username}</span>
-                    </span>
-                    <span className="tag">{account.role}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+            )}
+            <div className="field">
+              <label htmlFor="username">Username</label>
+              <input
+                id="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button className="btn btn-primary btn-block" disabled={busy}>
+              {busy ? 'Logging in…' : 'Log in'}
+            </button>
+          </form>
+          <p className="form-footnote">
+            New to Square Roots? <Link to="/signup">Sign up as a partner</Link>
+          </p>
         </section>
-      </main>
 
-      <Footer />
-    </div>
+        <section className="login-message-side">
+          <h2>Reducing Food Waste, Increasing Food Security</h2>
+          <p>
+            Square Roots connects perfectly healthy produce that doesn't meet grocery store cosmetic standards with
+            community members across Nova Scotia.
+          </p>
+        </section>
+      </div>
+
+      <section className="section">
+        <div className="container">
+          <h2>Demo accounts</h2>
+          <p className="muted">
+            Tap an account to fill in the form. Every demo password is <strong>{DEMO_PASSWORD}</strong>.
+          </p>
+          <DemoAccountList accounts={DEMO_ACCOUNTS} onPick={fillDemoAccount} />
+          <h3 className="demo-subheading">Signed up, waiting for approval</h3>
+          <p className="muted">These people signed up on the website. Log in as one to see what they see.</p>
+          <DemoAccountList accounts={PENDING_DEMO_ACCOUNTS} onPick={fillDemoAccount} />
+        </div>
+      </section>
+    </>
+  )
+}
+
+function DemoAccountList({ accounts, onPick }) {
+  return (
+    <ul className="demo-accounts">
+      {accounts.map((account) => (
+        <li key={account.username}>
+          <button type="button" onClick={() => onPick(account)}>
+            <span>
+              <strong>{account.who}</strong>
+              <br />
+              <span className="muted">{account.username}</span>
+            </span>
+            <span className="tag">{account.role}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
