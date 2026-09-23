@@ -63,6 +63,12 @@ class SignupTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("password", response.data)
 
+    def test_all_field_problems_are_reported_together(self):
+        User.objects.create_user("newfarm")
+        response = self.client.post(SIGNUP, farm_form(password="12345"), format="json")
+        self.assertIn("username", response.data)
+        self.assertIn("password", response.data)
+
     def test_each_role_must_fill_in_its_own_questions(self):
         response = self.client.post(SIGNUP, farm_form(produce_types=""), format="json")
         self.assertEqual(response.data["produce_types"], ["Please fill this in."])

@@ -49,6 +49,16 @@ class SignupSerializer(serializers.Serializer):
             raise serializers.ValidationError("That username is taken. Please choose another.")
         return value
 
+    def validate_password(self, value):
+        # Checked here (not in validate() below) so a weak password is reported
+        # at the same time as any other problem with the form.
+        person = User(username=self.initial_data.get("username", ""), email=self.initial_data.get("email", ""))
+        try:
+            validate_password(value, person)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(" ".join(error.messages))
+        return value
+
     def validate(self, data):
         errors = {}
         for field in REQUIRED_BY_ROLE[data["role"]]:
@@ -57,11 +67,6 @@ class SignupSerializer(serializers.Serializer):
 
         if data["role"] == User.Role.COMMUNITY_MANAGER and not data.get("site") and not data.get("planned_location", "").strip():
             errors["planned_location"] = "Choose a location, or tell us where you'd like to start one."
-
-        try:
-            validate_password(data["password"], User(username=data["username"], email=data["email"]))
-        except DjangoValidationError as error:
-            errors["password"] = " ".join(error.messages)
 
         if errors:
             raise serializers.ValidationError(errors)
