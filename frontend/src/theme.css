@@ -53,6 +53,8 @@ h3 {
   font-family: var(--font-display);
   font-weight: 700;
   line-height: 1.15;
+  /* Playfair's default old-style numbers make "0" look like "o"; use standard ones */
+  font-variant-numeric: lining-nums;
   margin: 0 0 0.4em;
 }
 

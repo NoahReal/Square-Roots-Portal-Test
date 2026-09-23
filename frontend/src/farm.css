@@ -1,0 +1,277 @@
+/*
+  Farm screens (Produce and Pickups). Same building blocks as the rest of the portal:
+  white blocks on cream, square edges, yellow for "needs attention", green for "done",
+  maroon for problems.
+*/
+
+.hero-meta {
+  margin: 12px 0 0;
+  font-weight: 500;
+}
+
+.list-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 12px;
+}
+
+.list-heading h2 {
+  margin: 0;
+}
+
+/* ---------- Produce ---------- */
+
+.farm-layout {
+  display: grid;
+  gap: 32px;
+  align-items: start;
+}
+
+.produce-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.produce-item {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-green-light);
+}
+
+.produce-item-editing {
+  border-left-color: var(--sr-yellow);
+}
+
+.produce-item h3 {
+  margin-bottom: 4px;
+}
+
+.produce-item p {
+  margin: 0 0 4px;
+}
+
+.produce-amount {
+  font-size: 1.1rem;
+}
+
+.produce-notes {
+  font-style: italic;
+}
+
+.produce-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.confirm-question {
+  flex-basis: 100%;
+  font-weight: 500;
+}
+
+/* ---------- Pickups ---------- */
+
+.stat-tiles {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  background: var(--sr-white);
+  border-top: 4px solid var(--sr-green-dark);
+}
+
+.stat-tile-alert {
+  border-top-color: var(--sr-yellow);
+  background: #FFF6E0;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--sr-ink-soft);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums;
+  font-weight: 700;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.stat-value-small {
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.order-group {
+  margin-top: 32px;
+}
+
+.order-card {
+  border-left: 6px solid var(--sr-green-dark);
+}
+
+.order-card.order-waiting {
+  border-left-color: var(--sr-yellow);
+}
+
+.order-card.order-cant_fill {
+  border-left-color: var(--sr-maroon);
+}
+
+.order-card.order-past {
+  border-left-color: var(--sr-line);
+}
+
+.order-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.order-head h3 {
+  margin-bottom: 2px;
+}
+
+.order-head p {
+  margin: 0;
+}
+
+.tag-waiting {
+  background: var(--sr-yellow);
+  border-color: var(--sr-ink);
+}
+
+.tag-confirmed {
+  background: var(--sr-green-dark);
+  border-color: var(--sr-green-dark);
+  color: var(--sr-white);
+}
+
+.tag-cant-fill {
+  background: var(--sr-maroon);
+  border-color: var(--sr-maroon);
+  color: var(--sr-white);
+}
+
+.order-pickup-notes {
+  margin: 12px 0 0;
+}
+
+.order-lines {
+  width: 100%;
+  margin: 16px 0;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.order-lines th,
+.order-lines td {
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--sr-line);
+}
+
+.order-lines thead th {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--sr-ink-soft);
+}
+
+.order-lines tfoot th,
+.order-lines tfoot td {
+  border-bottom: 0;
+  border-top: 2px solid var(--sr-ink);
+}
+
+.order-lines .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.order-farm-note {
+  padding: 12px 16px;
+  background: var(--sr-cream);
+  border-left: 4px solid var(--sr-maroon);
+}
+
+.payment {
+  display: inline-block;
+  margin: 0;
+  padding: 8px 14px;
+}
+
+.payment-paid {
+  background: var(--sr-green-dark);
+  color: var(--sr-white);
+}
+
+.payment-due {
+  background: var(--sr-cream);
+  border: 1px solid var(--sr-line);
+}
+
+.order-respond {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--sr-line);
+}
+
+.order-respond .button-row {
+  margin-top: 0;
+}
+
+/* ---------- Tablet and up ---------- */
+
+@media (min-width: 700px) {
+  .stat-tiles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .produce-item {
+    grid-template-columns: 1fr auto;
+    align-items: start;
+  }
+
+  .produce-item-editing {
+    grid-template-columns: 1fr;
+  }
+
+  .confirm-question {
+    flex-basis: auto;
+  }
+
+  .produce-item-actions {
+    justify-content: flex-end;
+    max-width: 280px;
+  }
+}
+
+@media (min-width: 1000px) {
+  .farm-layout {
+    grid-template-columns: 5fr 7fr;
+  }
+
+  /* Keep the form in view while scrolling a long produce list */
+  .farm-layout > .block {
+    position: sticky;
+    top: 16px;
+  }
+}

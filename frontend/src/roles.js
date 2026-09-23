@@ -36,8 +36,8 @@ export const ROLES = {
     welcome: 'Tell us what seconds produce you have, confirm orders, and see pickups and payments.',
     nav: [
       { to: '/portal/farm', label: 'Home', ready: true },
-      { to: '/portal/farm/produce', label: 'Produce', ready: false, description: 'Post what seconds produce you have and how much.' },
-      { to: '/portal/farm/pickups', label: 'Pickups', ready: false, description: 'Confirm orders and see pickup dates and payment status.' },
+      { to: '/portal/farm/produce', label: 'Produce', ready: true, description: 'Post what seconds produce you have and how much.' },
+      { to: '/portal/farm/pickups', label: 'Pickups', ready: true, description: 'Confirm orders and see pickup dates and payment status.' },
     ],
   },
   host_site: {

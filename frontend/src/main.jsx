@@ -6,6 +6,7 @@ import { AuthProvider } from './auth'
 import './theme.css'
 import './styles.css'
 import './public.css'
+import './farm.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

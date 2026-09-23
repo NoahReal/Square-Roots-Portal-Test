@@ -23,6 +23,8 @@ import PortalHomePage from './pages/portal/PortalHomePage'
 import ComingSoonPage from './pages/portal/ComingSoonPage'
 import ApiPage from './pages/portal/ApiPage'
 import SignupsPage from './pages/portal/SignupsPage'
+import ProducePage from './pages/portal/farm/ProducePage'
+import PickupsPage from './pages/portal/farm/PickupsPage'
 
 // Only lets an approved, logged-in user with the right role through.
 function RequireRole({ role }) {
@@ -38,6 +40,8 @@ function pageFor(item, roleConfig) {
   if (item.to === roleConfig.home) return <PortalHomePage />
   if (item.to === '/portal/admin/signups') return <SignupsPage />
   if (item.to === '/portal/admin/api') return <ApiPage />
+  if (item.to === '/portal/farm/produce') return <ProducePage />
+  if (item.to === '/portal/farm/pickups') return <PickupsPage />
   return <ComingSoonPage item={item} />
 }
 
