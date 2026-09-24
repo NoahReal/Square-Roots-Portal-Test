@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
+import ErrorBoundary from './components/ErrorBoundary'
 import { ROLES, homeFor } from './roles'
 
 // Public website (same addresses as squarerootssmu.ca)
@@ -140,51 +141,54 @@ function PageChange() {
 
 export default function App() {
   const { user, checking } = useAuth()
+  const { pathname } = useLocation()
   if (checking) return null
 
   return (
     <>
       <PageChange />
-      <Routes>
-        <Route element={<PublicLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/drop-dates-locations" element={<LocationsPage />} />
-          <Route path="/for-farms" element={<ForFarmsPage />} />
-          <Route path="/become-a-community-manager" element={<BecomeCommunityManagerPage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/contact-us" element={<ContactPage />} />
-          <Route path="/signup" element={<SignupChooserPage />} />
-          <Route path="/signup/:roleSlug" element={<SignupPage />} />
-          <Route path="/reserve" element={<ReservePage />} />
-          <Route path="/reserve/manage/:token" element={<ManageReservationPage />} />
-          <Route path="/whats-in-the-bundle" element={<BundlePage />} />
+      <ErrorBoundary resetKey={pathname}>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/drop-dates-locations" element={<LocationsPage />} />
+            <Route path="/for-farms" element={<ForFarmsPage />} />
+            <Route path="/become-a-community-manager" element={<BecomeCommunityManagerPage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/contact-us" element={<ContactPage />} />
+            <Route path="/signup" element={<SignupChooserPage />} />
+            <Route path="/signup/:roleSlug" element={<SignupPage />} />
+            <Route path="/reserve" element={<ReservePage />} />
+            <Route path="/reserve/manage/:token" element={<ManageReservationPage />} />
+            <Route path="/whats-in-the-bundle" element={<BundlePage />} />
 
-          <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
-          <Route path="/portal/pending" element={<PendingPage />} />
-          <Route path="/portal/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/portal/reset-password" element={<ResetPasswordPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
+            <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
+            <Route path="/portal/pending" element={<PendingPage />} />
+            <Route path="/portal/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/portal/reset-password" element={<ResetPasswordPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
 
-        <Route path="/portal" element={<Navigate to={user ? homeFor(user) : '/portal/login'} replace />} />
+          <Route path="/portal" element={<Navigate to={user ? homeFor(user) : '/portal/login'} replace />} />
 
-        {Object.entries(ROLES).map(([role, config]) => (
-          <Route key={role} element={<RequireRole role={role} />}>
+          {Object.entries(ROLES).map(([role, config]) => (
+            <Route key={role} element={<RequireRole role={role} />}>
+              <Route element={<Layout />}>
+                {config.nav.map((item) => (
+                  <Route key={item.to} path={item.to} element={pageFor(item)} />
+                ))}
+              </Route>
+            </Route>
+          ))}
+
+          <Route element={<RequireApproved />}>
             <Route element={<Layout />}>
-              {config.nav.map((item) => (
-                <Route key={item.to} path={item.to} element={pageFor(item)} />
-              ))}
+              <Route path="/portal/account" element={<AccountPage />} />
             </Route>
           </Route>
-        ))}
-
-        <Route element={<RequireApproved />}>
-          <Route element={<Layout />}>
-            <Route path="/portal/account" element={<AccountPage />} />
-          </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </ErrorBoundary>
     </>
   )
 }

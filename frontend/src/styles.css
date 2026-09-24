@@ -558,3 +558,24 @@
     display: block;
   }
 }
+
+/* ---------- "Something went wrong" screen ---------- */
+
+.crash-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px var(--gutter);
+  text-align: center;
+}
+
+.crash-logo img {
+  width: 96px;
+}
+
+.crash-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
