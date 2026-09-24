@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy, useEffect, useRef } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -142,12 +142,17 @@ function titleFor(pathname) {
 }
 
 // Start each new page at the top, like a normal website, and set the browser tab title.
+// After the first page, focus moves to the new page's content, so screen readers announce it
+// (without this, they stay on the link that was clicked and say nothing).
 function PageChange() {
   const { pathname } = useLocation()
+  const firstPage = useRef(true)
   useEffect(() => {
     window.scrollTo(0, 0)
     document.title = titleFor(pathname)
     updateSearchTags(pathname, document.title)
+    if (firstPage.current) firstPage.current = false
+    else document.getElementById('main')?.focus({ preventScroll: true })
   }, [pathname])
   return null
 }

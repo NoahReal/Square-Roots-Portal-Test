@@ -6,8 +6,11 @@ import SiteFooter from './SiteFooter'
 export default function PublicLayout() {
   return (
     <div className="app">
+      <a href="#main" className="skip-link">
+        Skip to main content
+      </a>
       <SiteHeader />
-      <main className="app-main">
+      <main className="app-main" id="main" tabIndex={-1}>
         <Outlet />
       </main>
       <SiteFooter />

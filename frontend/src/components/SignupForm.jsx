@@ -140,9 +140,13 @@ export default function SignupForm({ roleSlug }) {
   )
 }
 
-function FieldError({ error }) {
+function FieldError({ error, id }) {
   if (!error) return null
-  return <p className="field-error">{Array.isArray(error) ? error.join(' ') : error}</p>
+  return (
+    <p className="field-error" id={id}>
+      {Array.isArray(error) ? error.join(' ') : error}
+    </p>
+  )
 }
 
 function Field({ label, hint, name, value, onChange, error, required, multiline, ...inputProps }) {
@@ -161,10 +165,11 @@ function Field({ label, hint, name, value, onChange, error, required, multiline,
         onChange={(e) => onChange(name, e.target.value)}
         required={required}
         aria-invalid={Boolean(error)}
+        aria-describedby={error ? id + '-error' : undefined}
         rows={multiline ? 4 : undefined}
         {...inputProps}
       />
-      <FieldError error={error} />
+      <FieldError error={error} id={id + '-error'} />
     </div>
   )
 }

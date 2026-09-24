@@ -156,7 +156,13 @@ export default function ReservePage() {
               <Step number="1" title={t.step1}>
                 <div className={'field' + (errors.site_drop ? ' has-error' : '')}>
                   <label htmlFor="reserve-site">{t.location}</label>
-                  <select id="reserve-site" value={siteId ?? ''} onChange={(e) => chooseSite(Number(e.target.value) || null)}>
+                  <select
+                    id="reserve-site"
+                    value={siteId ?? ''}
+                    onChange={(e) => chooseSite(Number(e.target.value) || null)}
+                    aria-invalid={Boolean(errors.site_drop)}
+                    aria-describedby={errors.site_drop ? 'reserve-site-error' : undefined}
+                  >
                     <option value="">{t.chooseLocation}</option>
                     {options.sites.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -164,7 +170,7 @@ export default function ReservePage() {
                       </option>
                     ))}
                   </select>
-                  <FieldError error={errors.site_drop} />
+                  <FieldError error={errors.site_drop} id="reserve-site-error" />
                   <p className="reserve-hint">
                     <Link to="/request-a-location">{t.noneNearby}</Link>
                   </p>
@@ -420,15 +426,24 @@ function TextField({ label, hint, id, error, ...inputProps }) {
         {label}
         {hint && <span className="field-hint"> ({hint})</span>}
       </label>
-      <input id={'reserve-' + id} aria-invalid={Boolean(error)} {...inputProps} />
-      <FieldError error={error} />
+      <input
+        id={'reserve-' + id}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `reserve-${id}-error` : undefined}
+        {...inputProps}
+      />
+      <FieldError error={error} id={`reserve-${id}-error`} />
     </div>
   )
 }
 
-function FieldError({ error }) {
+function FieldError({ error, id }) {
   if (!error) return null
-  return <p className="field-error">{[].concat(error).join(' ')}</p>
+  return (
+    <p className="field-error" id={id}>
+      {[].concat(error).join(' ')}
+    </p>
+  )
 }
 
 // Reservations made on this device that haven't happened yet, so people can find them without the email.

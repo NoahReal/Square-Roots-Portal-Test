@@ -7,6 +7,11 @@ const API_URL = process.env.API_URL || 'http://127.0.0.1:8000'
 
 export default defineConfig({
   plugins: [react()],
+  // Website tests: `npm test`. They run in a pretend browser (jsdom), with the API faked.
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+  },
   server: {
     // Send every /api request to Django, so the browser sees one website
     // and the login cookie just works. changeOrigin: false keeps the browser's

@@ -296,12 +296,23 @@ source .venv/bin/activate
 python manage.py test
 ```
 
-They cover logins (right and wrong passwords, unknown usernames, blank forms, switched-off accounts,
-CSRF protection, every demo account's role), sign-ups (pending accounts, weak passwords, taken
-usernames, each role's required questions), admin approval, the locations list, the contact form,
-and which roles can use which API. They live in `backend/*/tests*.py`.
+The backend tests (171) cover logins, two-step login and lockouts, sign-ups and approval, ordering,
+money, farms, reservations (waitlist, every drop, pickup codes, French emails, reminders, feedback),
+host sites, privacy clean-up, backups and which roles can use which API. They live in
+`backend/*/tests*.py`.
 
-**2. The admin API page.** Log in as `admin` and open **API** in the menu (`/portal/admin/api`). It has:
+The website tests run in a pretend browser with the API faked:
+
+```bash
+cd frontend
+npm test
+```
+
+They cover reserving (prices, gifts, missing details, the waitlist, locations without online
+reservations), the French switch, the reservation page and feedback, the "something went wrong"
+screen and the recipe matching. They live in `frontend/src/test/`.
+
+**2. The admin API page.** Log in as `admin` and open **Developer tools** from the admin home page (`/portal/admin/api`). It has:
 - **Endpoints**: every API the portal uses, who can use it and what it does. The server builds this
   list itself, so new APIs show up automatically. Write a one-line docstring on each API view,
   because that's where the description comes from. GET endpoints have a **Try it** button.

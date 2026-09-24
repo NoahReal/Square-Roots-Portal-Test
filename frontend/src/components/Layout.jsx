@@ -21,6 +21,9 @@ export default function Layout() {
 
   return (
     <div className={'app' + (showTabs ? ' has-tab-bar' : '')}>
+      <a href="#main" className="skip-link">
+        Skip to main content
+      </a>
       {demoMode && <DemoBanner />}
       <header className="site-header">
         <div className="site-header-inner">
@@ -72,7 +75,7 @@ export default function Layout() {
       </header>
       <div className="green-band" />
 
-      <main className="app-main">
+      <main className="app-main" id="main" tabIndex={-1}>
         <Outlet />
       </main>
 
