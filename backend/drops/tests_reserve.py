@@ -4,7 +4,7 @@ from django.core import mail
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from .models import Preorder, StandingReservation, WaitlistEntry
+from .models import Preorder, SiteDrop, StandingReservation, WaitlistEntry
 from .reservations import apply_standing
 from .tests import DropTestCase, make_drop
 
@@ -363,3 +363,43 @@ class ForgetOldDetailsTests(ReserveTestCase):
         forgotten = Preorder.objects.get(site_drop=old)
         self.assertEqual((forgotten.customer_name, forgotten.email, forgotten.phone, forgotten.paid), ("Customer (details removed)", "", "", True))
         self.assertEqual(Preorder.objects.get(site_drop=self.drop).email, "alex@example.com")
+
+
+class ReminderTests(ReserveTestCase):
+    def run_reminders(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        call_command("send_reminders", stdout=StringIO())
+
+    def test_customers_are_reminded_once_the_day_before(self):
+        from unittest import mock
+
+        from django.utils import timezone
+
+        tomorrow = make_drop(self.site, 1, cutoff_days_from_now=-2)
+        Preorder.objects.create(site_drop=tomorrow, customer_name="Alex B.", email="alex@example.com", language="fr")
+        Preorder.objects.create(site_drop=tomorrow, customer_name="Pat D.", phone="902-555-0100")  # no email
+        morning = timezone.localtime().replace(hour=10)
+        with mock.patch("django.utils.timezone.localtime", return_value=morning):
+            mail.outbox.clear()
+            self.run_reminders()
+            self.run_reminders()  # running again sends nothing new
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("À demain", mail.outbox[0].subject)
+        self.assertIn(Preorder.objects.get(customer_name="Alex B.").pickup_code, mail.outbox[0].body)
+
+    def test_managers_who_have_not_ordered_are_reminded_before_the_cutoff(self):
+        from accounts.models import User
+
+        self.manager.email = "cm@example.com"
+        self.manager.status = User.Status.APPROVED
+        self.manager.save()
+        closing = make_drop(self.site, 5, cutoff_days_from_now=0.5)
+        mail.outbox.clear()
+        self.run_reminders()
+        self.run_reminders()
+        reminders = [m for m in mail.outbox if "closes soon" in m.subject]
+        self.assertEqual(len(reminders), 1)
+        self.assertIsNotNone(SiteDrop.objects.get(pk=closing.pk).order_reminder_sent_at)

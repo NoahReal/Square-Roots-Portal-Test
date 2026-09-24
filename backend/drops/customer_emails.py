@@ -68,6 +68,8 @@ TEXT = {
         "cancelled": "We're sorry: the {site} drop on {date} is cancelled, so your reservation is cancelled too. "
         "You won't be charged.\n\nSee the next drops and reserve again at {reserve_link}",
         "message_subject": "A message about your Square Roots {site} drop",
+        "reminder_subject": "See you tomorrow at Square Roots {site}",
+        "reminder": "A reminder that your {bundles} will be ready tomorrow.",
     },
     "fr": {
         "hi": "Bonjour {name},",
@@ -99,6 +101,8 @@ TEXT = {
         "cancelled": "Nous sommes désolés : la distribution de {site} du {date} est annulée, alors votre réservation "
         "l'est aussi. Vous n'aurez rien à payer.\n\nVoyez les prochaines distributions et réservez de nouveau : {reserve_link}",
         "message_subject": "Un message au sujet de votre distribution Square Roots {site}",
+        "reminder_subject": "À demain chez Square Roots {site}",
+        "reminder": "Petit rappel : vos {bundles} seront prêts demain.",
     },
 }
 
@@ -170,3 +174,25 @@ def notice(person, site_url, subject_key, message_key=None, message=None, **valu
     w = words(person)
     link = w["your_reservation"].format(link=manage_link(person.manage_token, site_url)) if person.manage_token else ""
     return send(person, w[subject_key].format(**values), message or w[message_key].format(**values), link)
+
+
+def reminder(preorder, site_url, amount):
+    """The day before the drop: when, where, the pickup code and what to pay."""
+    w = words(preorder)
+    lang = preorder.language
+    site = preorder.site_drop.site
+    how = (
+        w["delivery"].format(address=preorder.delivery_address, partner=site.delivery_partner)
+        if preorder.delivery
+        else w["code"].format(code=preorder.pickup_code)
+    )
+    money = f"{amount:.2f}".replace(".", ",") if lang == "fr" else f"{amount:.2f}"
+    link = w["your_reservation"].format(link=manage_link(preorder.manage_token, site_url)) if preorder.manage_token else ""
+    return send(
+        preorder,
+        w["reminder_subject"].format(site=site.name),
+        w["reminder"].format(bundles=w["bundles"](preorder.bundles)),
+        drop_details(preorder.site_drop, lang) + "\n" + w["to_pay"].format(amount=money),
+        how,
+        link,
+    )

@@ -109,6 +109,8 @@ class SiteDrop(models.Model):
     order_cutoff = models.DateTimeField()
     starts_at = models.TimeField(default=time(11))
     ends_at = models.TimeField(default=time(13))
+    # When the "ordering closes soon" reminder went to the Community Manager (see send_reminders).
+    order_reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["drop_date", "site__sort_order"]
@@ -222,6 +224,8 @@ class Preorder(models.Model):
     pickup_code = models.CharField(max_length=4, blank=True)
     # Only for online reservations: the secret in the customer's "change or cancel" link.
     manage_token = models.CharField(max_length=40, blank=True, db_index=True)
+    # When the "see you tomorrow" reminder was emailed (see send_reminders).
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
