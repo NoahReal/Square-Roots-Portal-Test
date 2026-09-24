@@ -403,3 +403,43 @@ class ReminderTests(ReserveTestCase):
         reminders = [m for m in mail.outbox if "closes soon" in m.subject]
         self.assertEqual(len(reminders), 1)
         self.assertIsNotNone(SiteDrop.objects.get(pk=closing.pk).order_reminder_sent_at)
+
+
+class FeedbackAndImpactTests(ReserveTestCase):
+    def test_feedback_after_the_drop_shows_for_the_community_manager(self):
+        token = self.reserve().data["token"]
+        self.assertEqual(self.public.post(f"/api/reserve/{token}/feedback/", {"feedback": "good"}, format="json").status_code, 400)
+
+        self.drop.drop_date = self.drop.drop_date.replace(year=2000)
+        self.drop.save()
+        response = self.public.post(f"/api/reserve/{token}/feedback/", {"feedback": "poor", "comment": "Carrots were soft"}, format="json")
+        self.assertEqual(response.data["feedback"], "poor")
+        drops = self.cm.get("/api/manager/drops/").data
+        # The drop is now long past, so check the serializer directly.
+        from .serializers import SiteDropSerializer
+
+        feedback = SiteDropSerializer(self.drop).data["feedback"]
+        self.assertEqual((feedback["poor"], feedback["comments"][0]["comment"]), (1, "Carrots were soft"))
+        self.assertIsInstance(drops, list)
+
+    def test_feedback_is_asked_by_email_the_day_after(self):
+        from io import StringIO
+        from unittest import mock
+
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        yesterday = make_drop(self.site, -1, cutoff_days_from_now=-5)
+        Preorder.objects.create(site_drop=yesterday, customer_name="Alex B.", email="alex@example.com", manage_token="t0k3n")
+        with mock.patch("django.utils.timezone.localtime", return_value=timezone.localtime().replace(hour=11)):
+            mail.outbox.clear()
+            call_command("send_reminders", stdout=StringIO())
+            call_command("send_reminders", stdout=StringIO())
+        asked = [m for m in mail.outbox if "How was your" in m.subject]
+        self.assertEqual(len(asked), 1)
+        self.assertIn("/reserve/manage/t0k3n#feedback", asked[0].body)
+
+    def test_impact_counts_bundles_picked_up_with_the_same_email(self):
+        past = make_drop(self.site, -14, cutoff_days_from_now=-18)
+        Preorder.objects.create(site_drop=past, customer_name="Alex", email="ALEX@example.com", bundles=2, picked_up=True)
+        self.assertEqual(self.reserve().data["impact"], {"bundles": 2, "pounds": 20})

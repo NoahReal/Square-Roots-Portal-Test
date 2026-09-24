@@ -4,6 +4,7 @@ private link for changing or cancelling it, and a pickup code to show at the dro
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
@@ -15,7 +16,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .models import (
-    DropCycle, Language, OperatingSettings, Preorder, PriceTier, Site, SiteDrop, StandingReservation, WaitlistEntry,
+    BUNDLE_POUNDS, DropCycle, Language, OperatingSettings, Preorder, PriceTier, Site, SiteDrop, StandingReservation, WaitlistEntry,
     new_manage_token,
 )
 from .reservations import (
@@ -172,6 +173,14 @@ def check_delivery_offered(site_drop, data):
         raise ValidationError({"delivery": f"{site_drop.site.name} doesn't offer home delivery."})
 
 
+def customer_impact(email):
+    """What this customer has picked up so far (matched by email), for "Your impact" on their page."""
+    if not email:
+        return None
+    bundles = Preorder.objects.filter(email__iexact=email, picked_up=True).aggregate(total=Sum("bundles"))["total"] or 0
+    return {"bundles": bundles, "pounds": bundles * BUNDLE_POUNDS} if bundles else None
+
+
 def reservation_json(reservation):
     """A reservation or waitlist spot, as the customer sees it on their private page."""
     site_drop = reservation.site_drop
@@ -193,6 +202,9 @@ def reservation_json(reservation):
         "every_drop": reservation.standing_id is not None,
         "language": reservation.language,
         "bundle": bundle_contents(site_drop.cycle),
+        "has_happened": site_drop.has_happened,
+        "feedback": "" if waiting else reservation.feedback,
+        "impact": customer_impact(reservation.email),
         "amount_due": f"{amount_due(reservation):.2f}",
         "delivery_fee": f"{OperatingSettings.current().delivery_fee:.2f}",
         "picked_up": False if waiting else reservation.picked_up,
@@ -375,3 +387,22 @@ class BundleView(APIView):
         if cycle is None:
             return Response({"drop_date": None, "upcoming": False, "items": []})
         return Response({"drop_date": cycle.drop_date, "upcoming": cycle.drop_date >= today, "items": bundle_contents(cycle)})
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class FeedbackView(APIView):
+    """ "How was your bundle?" after the drop: great, okay or not great, and an optional comment. Public, by private link."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, token):
+        reservation = find_reservation(token)
+        if isinstance(reservation, WaitlistEntry) or not reservation.site_drop.has_happened:
+            raise ValidationError({"detail": "You can tell us how it went after the drop."})
+        feedback = request.data.get("feedback")
+        if feedback not in Preorder.Feedback.values:
+            raise ValidationError({"feedback": "Choose how your bundle was."})
+        reservation.feedback = feedback
+        reservation.feedback_comment = (request.data.get("comment") or "").strip()[:1000]
+        reservation.save(update_fields=["feedback", "feedback_comment"])
+        return Response(reservation_json(reservation))

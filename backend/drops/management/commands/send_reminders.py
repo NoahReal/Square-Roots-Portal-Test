@@ -3,6 +3,7 @@
 Run it every hour, for example with cron:  python manage.py send_reminders --site-url https://your.site
   - Customers: the day before their drop (from 9 a.m.), with their pickup code.
   - Community Managers: when ordering closes within a day and they haven't ordered yet.
+  - Customers: "How was your bundle?" the day after their drop (from 9 a.m.).
 """
 
 from datetime import timedelta
@@ -32,8 +33,11 @@ class Command(BaseCommand):
     def handle(self, *args, site_url, **options):
         now = timezone.localtime()
         customers = self.remind_customers(now, site_url) if now.hour >= REMINDER_HOUR else 0
+        asked = self.ask_for_feedback(now, site_url) if now.hour >= REMINDER_HOUR else 0
         managers = self.remind_managers(now)
-        self.stdout.write(f"Reminded {customers} customers and {managers} Community Managers.")
+        self.stdout.write(
+            f"Reminded {customers} customers and {managers} Community Managers, and asked {asked} customers for feedback."
+        )
 
     def remind_customers(self, now, site_url):
         tomorrow = now.date() + timedelta(days=1)
@@ -47,6 +51,20 @@ class Command(BaseCommand):
             preorder.save(update_fields=["reminder_sent_at"])
             sent += 1
         return sent
+
+    def ask_for_feedback(self, now, site_url):
+        # Up to three days after the drop, so a missed day of reminders doesn't skip anyone.
+        recent = Preorder.objects.filter(
+            site_drop__drop_date__lt=now.date(), site_drop__drop_date__gte=now.date() - timedelta(days=3),
+            feedback_asked_at__isnull=True, feedback="",
+        ).exclude(email="").exclude(manage_token="").select_related("site_drop__site")
+        asked = 0
+        for preorder in recent:
+            customer_emails.feedback_request(preorder, site_url)
+            preorder.feedback_asked_at = now
+            preorder.save(update_fields=["feedback_asked_at"])
+            asked += 1
+        return asked
 
     def remind_managers(self, now):
         closing_soon = SiteDrop.objects.filter(

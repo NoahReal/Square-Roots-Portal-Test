@@ -1833,3 +1833,35 @@
 .copyright a {
   color: inherit;
 }
+
+/* After the drop: feedback and the customer's impact */
+
+.feedback-box,
+.impact-box {
+  margin: 24px 0;
+  padding: 18px 20px;
+  background: var(--sr-white);
+  border-left: 6px solid var(--sr-green-dark);
+}
+
+.feedback-box h2,
+.impact-box h2 {
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+}
+
+.impact-box p {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.feedback-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.feedback-choices .btn {
+  flex: 1 1 100px;
+}

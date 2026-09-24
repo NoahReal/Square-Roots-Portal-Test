@@ -226,6 +226,16 @@ class Preorder(models.Model):
     manage_token = models.CharField(max_length=40, blank=True, db_index=True)
     # When the "see you tomorrow" reminder was emailed (see send_reminders).
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Feedback(models.TextChoices):
+        GOOD = "good", "Great"
+        OKAY = "okay", "Okay"
+        POOR = "poor", "Not great"
+
+    # "How was your bundle?", asked by email the day after the drop.
+    feedback_asked_at = models.DateTimeField(null=True, blank=True)
+    feedback = models.CharField(max_length=8, choices=Feedback.choices, blank=True)
+    feedback_comment = models.CharField(max_length=1000, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

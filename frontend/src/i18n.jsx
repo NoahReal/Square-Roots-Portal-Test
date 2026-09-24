@@ -160,6 +160,16 @@ const WORDS = {
     calendarTitle: (bundles) => `Pick up ${bundles} from Square Roots`,
     calendarCode: (code) => `Your pickup code is ${code}.`,
 
+    yourImpact: 'Your impact',
+    impactText: (bundles, pounds) =>
+      `You’ve picked up ${bundles === 1 ? '1 bundle' : `${bundles} bundles`}: ${pounds} lbs of good produce that didn’t go to waste. Thank you!`,
+    howWasIt: 'How was your bundle?',
+    feedbackGood: 'Great',
+    feedbackOkay: 'Okay',
+    feedbackPoor: 'Not great',
+    feedbackComment: 'Anything to tell us? (optional)',
+    sendFeedback: 'Send',
+    feedbackThanks: 'Thank you! Your Community Manager will see this.',
     inYourBundle: 'What’s in your bundle',
     notDecidedYet:
       'We buy from farms once ordering closes, so we’ll know what’s in this bundle a few days before the drop. Check back then.',
@@ -333,6 +343,16 @@ const WORDS = {
     calendarTitle: (bundles) => `Récupérer ${bundles} chez Square Roots`,
     calendarCode: (code) => `Votre code de cueillette est ${code}.`,
 
+    yourImpact: 'Votre impact',
+    impactText: (bundles, pounds) =>
+      `Vous avez récupéré ${bundles === 1 ? '1 panier' : `${bundles} paniers`} : ${pounds} lb de bons produits qui n’ont pas été gaspillés. Merci!`,
+    howWasIt: 'Comment était votre panier?',
+    feedbackGood: 'Très bien',
+    feedbackOkay: 'Correct',
+    feedbackPoor: 'Pas terrible',
+    feedbackComment: 'Quelque chose à nous dire? (facultatif)',
+    sendFeedback: 'Envoyer',
+    feedbackThanks: 'Merci! Votre gestionnaire communautaire le verra.',
     inYourBundle: 'Dans votre panier',
     notDecidedYet:
       'Nous achetons aux fermes une fois les commandes fermées. Nous saurons ce que contient ce panier quelques jours avant la distribution.',

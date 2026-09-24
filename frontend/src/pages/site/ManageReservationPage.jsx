@@ -95,6 +95,15 @@ export default function ManageReservationPage() {
 
         {reservation.picked_up && <div className="notice notice-success">{t.pickedUp}</div>}
 
+        {reservation.has_happened && !waiting && <Feedback reservation={reservation} onChange={setReservation} />}
+
+        {reservation.impact && (
+          <div className="impact-box">
+            <h2>{t.yourImpact}</h2>
+            <p>{t.impactText(reservation.impact.bundles, format.number(reservation.impact.pounds))}</p>
+          </div>
+        )}
+
         <dl className="reservation-details">
           <div>
             <dt>{t.when}</dt>
@@ -188,6 +197,68 @@ export default function ManageReservationPage() {
           )
         )}
       </div>
+    </section>
+  )
+}
+
+// "How was your bundle?" after the drop: one tap, and an optional comment.
+function Feedback({ reservation, onChange }) {
+  const { t } = useLanguage()
+  const [choice, setChoice] = useState(reservation.feedback)
+  const [comment, setComment] = useState('')
+  const [sent, setSent] = useState(Boolean(reservation.feedback))
+
+  async function send(feedback, withComment = '') {
+    setChoice(feedback)
+    const updated = await api(`/reserve/${reservation.token}/feedback/`, {
+      method: 'POST',
+      body: { feedback, comment: withComment },
+    })
+    onChange(updated)
+    setSent(true)
+  }
+
+  const choices = [
+    ['good', t.feedbackGood],
+    ['okay', t.feedbackOkay],
+    ['poor', t.feedbackPoor],
+  ]
+
+  return (
+    <section className="feedback-box" id="feedback" aria-labelledby="feedback-title">
+      <h2 id="feedback-title">{t.howWasIt}</h2>
+      <div className="feedback-choices" role="group" aria-labelledby="feedback-title">
+        {choices.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={'btn' + (choice === value ? ' btn-primary' : '')}
+            aria-pressed={choice === value}
+            onClick={() => send(value, comment)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {choice && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            send(choice, comment)
+          }}
+        >
+          <div className="field">
+            <label htmlFor="feedback-comment">{t.feedbackComment}</label>
+            <textarea id="feedback-comment" rows={3} maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} />
+          </div>
+          <button className="btn btn-small">{t.sendFeedback}</button>
+        </form>
+      )}
+      {sent && (
+        <p className="muted" role="status">
+          {t.feedbackThanks}
+        </p>
+      )}
     </section>
   )
 }

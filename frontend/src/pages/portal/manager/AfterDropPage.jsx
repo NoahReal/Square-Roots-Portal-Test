@@ -104,7 +104,32 @@ function ReportCard({ drop, onSaved, startOpen = false }) {
           </button>
         </div>
       )}
+      <CustomerFeedback feedback={drop.feedback} />
     </article>
+  )
+}
+
+// What customers said when asked "How was your bundle?" the day after the drop.
+function CustomerFeedback({ feedback }) {
+  const total = feedback.good + feedback.okay + feedback.poor
+  if (total === 0) return null
+  const labels = { good: 'Great', okay: 'Okay', poor: 'Not great' }
+  return (
+    <div className="customer-feedback">
+      <h4>What customers said</h4>
+      <p>
+        {feedback.good} said great, {feedback.okay} okay, {feedback.poor} not great.
+      </p>
+      {feedback.comments.length > 0 && (
+        <ul>
+          {feedback.comments.map((c, i) => (
+            <li key={i}>
+              <span className="tag">{labels[c.feedback]}</span> “{c.comment}”
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

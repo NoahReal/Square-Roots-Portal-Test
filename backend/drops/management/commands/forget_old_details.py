@@ -25,7 +25,8 @@ class Command(BaseCommand):
         # Reservations: keep the numbers (bundles, price, paid) for the drop's records, remove who it was.
         reservations = Preorder.objects.filter(site_drop__drop_date__lt=drops_before).exclude(customer_name=REMOVED)
         forgotten = reservations.update(
-            customer_name=REMOVED, email="", phone="", delivery_address="", manage_token="", standing=None
+            customer_name=REMOVED, email="", phone="", delivery_address="", manage_token="", standing=None,
+            feedback_comment="",
         )
         # Waitlist spots for drops that have happened are no use to anyone.
         waitlist, _ = WaitlistEntry.objects.filter(site_drop__drop_date__lt=today).delete()

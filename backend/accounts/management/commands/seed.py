@@ -127,6 +127,13 @@ CUSTOMERS = [
     "Casey W.", "Drew F.", "Jordan P.", "Riley H.", "Avery N.", "Quinn O.", "Jesse G.",
 ]
 
+# Made-up answers to "How was your bundle?"
+FEEDBACK = [
+    ("good", ""), ("good", ""), ("good", "The carrots were so sweet. Made soup for the week!"),
+    ("good", "Love the apples, my kids eat them all."), ("okay", ""), ("okay", "A few soft potatoes, but most were great."),
+    ("poor", "The cabbage had gone bad inside."),
+]
+
 LEFTOVER_PLACES = [DropReport.Leftovers.DONATED, DropReport.Leftovers.DONATED, DropReport.Leftovers.KEPT, DropReport.Leftovers.COMPOSTED]
 
 # People who signed up on the website and are waiting for an admin to review them.
@@ -373,13 +380,15 @@ class Command(BaseCommand):
         # Preorders at the sites with demo Community Managers, for the last drop and this Saturday.
         if manager and number in (-1, 0):
             for customer in self.random.sample(CUSTOMERS, self.random.randint(5, 8)):
-                Preorder.objects.create(
+                preorder = Preorder.objects.create(
                     site_drop=site_drop, customer_name=customer, bundles=self.random.choice([1, 1, 1, 2]),
                     phone=f"902-555-{self.random.randint(1000, 9999)}" if self.random.random() < 0.6 else "",
                     price_tier=self.random.choice(["standard"] * 7 + ["at_cost"] * 2 + ["free"]),
                     paid=number < 0 or self.random.random() < 0.5,
                     picked_up=number < 0,
                 )
+                if number == -1:
+                    self.add_feedback(preorder)
         # Home deliveries where a delivery partner operates, for this Saturday.
         if site_drop.site.delivery_partner and number == 0:
             for customer, address in zip(self.random.sample(CUSTOMERS, 3), DELIVERY_ADDRESSES):
@@ -414,6 +423,7 @@ class Command(BaseCommand):
             standing = None
             if reserved == 0 and site_drop.site.people.exists():
                 standing = StandingReservation.objects.create(site=site_drop.site, **details)
+                self.add_regular_history(site_drop, details)
             Preorder.objects.create(
                 site_drop=site_drop, source=Preorder.Source.ONLINE, manage_token=new_manage_token(), standing=standing,
                 **details,
@@ -437,6 +447,25 @@ class Command(BaseCommand):
                     site_drop=site_drop, customer_name=name, bundles=1,
                     email=f"{name.split()[0].lower()}{rnd.randint(10, 99)}@example.com",
                 )
+
+    def add_feedback(self, preorder):
+        """What some customers said about the last drop ("How was your bundle?")."""
+        rnd = self.reservation_random
+        if rnd.random() < 0.4:
+            return  # not everyone answers
+        feedback, comment = rnd.choice(FEEDBACK)
+        preorder.feedback, preorder.feedback_comment = feedback, comment
+        preorder.save(update_fields=["feedback", "feedback_comment"])
+
+    def add_regular_history(self, site_drop, details):
+        """Someone who reserves every drop has picked up at the last few too (for "Your impact")."""
+        earlier = SiteDrop.objects.filter(site=site_drop.site, drop_date__lt=self.today).order_by("-drop_date")[:4]
+        for past in earlier:
+            Preorder.objects.create(
+                site_drop=past, source=Preorder.Source.ONLINE, paid=True, picked_up=True,
+                feedback=self.reservation_random.choice(["good", "good", "good", "okay"]),
+                **{**details, "delivery": False, "delivery_address": ""},
+            )
 
     def add_every_drop_reservations(self, site_drop):
         """People who reserve every drop already have a reservation for the drop after next."""

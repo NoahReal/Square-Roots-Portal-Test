@@ -761,3 +761,25 @@
     display: inline;
   }
 }
+
+/* After Drop: customer feedback */
+
+.customer-feedback {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--sr-line);
+}
+
+.customer-feedback h4 {
+  margin: 0 0 6px;
+}
+
+.customer-feedback ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.customer-feedback li {
+  padding: 4px 0;
+}

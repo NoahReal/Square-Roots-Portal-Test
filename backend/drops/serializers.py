@@ -117,6 +117,7 @@ class SiteDropSerializer(serializers.ModelSerializer):
     online_count = serializers.SerializerMethodField()
     pay_it_forward = serializers.SerializerMethodField()
     waitlist = serializers.SerializerMethodField()
+    feedback = serializers.SerializerMethodField()
     report = serializers.SerializerMethodField()
     statement = serializers.SerializerMethodField()
 
@@ -126,7 +127,7 @@ class SiteDropSerializer(serializers.ModelSerializer):
             "id", "cycle_name", "site_name", "drop_date", "starts_at", "ends_at", "order_cutoff",
             "ordering_open", "has_happened", "bundles", "order_updated_at",
             "preorder_count", "preorder_bundles", "picked_up_count", "delivery_count", "delivery_partner",
-            "online_reservations", "reservation_limit", "online_count", "pay_it_forward", "waitlist", "report", "statement",
+            "online_reservations", "reservation_limit", "online_count", "pay_it_forward", "waitlist", "feedback", "report", "statement",
         ]
 
     def _order(self, site_drop):
@@ -158,6 +159,12 @@ class SiteDropSerializer(serializers.ModelSerializer):
     def get_pay_it_forward(self, site_drop):
         """Pay-it-forward gifts on reservations that were paid for: a hint when logging donations after the drop."""
         return f"{sum((p.pay_it_forward for p in site_drop.preorders.all() if p.paid), Decimal('0')):.2f}"
+
+    def get_feedback(self, site_drop):
+        """What customers said after the drop: how many said great, okay or not great, and their comments."""
+        given = [p for p in site_drop.preorders.all() if p.feedback]
+        counts = {choice: sum(1 for p in given if p.feedback == choice) for choice in Preorder.Feedback.values}
+        return {**counts, "comments": [{"feedback": p.feedback, "comment": p.feedback_comment} for p in given if p.feedback_comment]}
 
     def get_waitlist(self, site_drop):
         return [

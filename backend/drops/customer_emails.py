@@ -70,6 +70,9 @@ TEXT = {
         "message_subject": "A message about your Square Roots {site} drop",
         "reminder_subject": "See you tomorrow at Square Roots {site}",
         "reminder": "A reminder that your {bundles} will be ready tomorrow.",
+        "feedback_subject": "How was your Square Roots bundle?",
+        "feedback": "Thanks for coming to Square Roots {site}! How was your bundle? It takes one tap, and it helps "
+        "your Community Manager and the farms:\n{link}#feedback",
     },
     "fr": {
         "hi": "Bonjour {name},",
@@ -103,6 +106,9 @@ TEXT = {
         "message_subject": "Un message au sujet de votre distribution Square Roots {site}",
         "reminder_subject": "À demain chez Square Roots {site}",
         "reminder": "Petit rappel : vos {bundles} seront prêts demain.",
+        "feedback_subject": "Comment était votre panier Square Roots?",
+        "feedback": "Merci d'être venu à Square Roots {site}! Comment était votre panier? Un seul clic suffit, "
+        "et ça aide votre gestionnaire communautaire et les fermes :\n{link}#feedback",
     },
 }
 
@@ -195,4 +201,14 @@ def reminder(preorder, site_url, amount):
         drop_details(preorder.site_drop, lang) + "\n" + w["to_pay"].format(amount=money),
         how,
         link,
+    )
+
+
+def feedback_request(preorder, site_url):
+    """The day after the drop: "How was your bundle?", linking to the reservation page."""
+    w = words(preorder)
+    return send(
+        preorder,
+        w["feedback_subject"],
+        w["feedback"].format(site=preorder.site_drop.site.name, link=manage_link(preorder.manage_token, site_url)),
     )

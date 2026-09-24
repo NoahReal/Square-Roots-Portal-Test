@@ -13,6 +13,7 @@ urlpatterns = [
     path("reserve/", views_reserve.ReserveView.as_view()),
     path("reserve/<str:token>/", views_reserve.ManageReservationView.as_view()),
     path("reserve/<str:token>/every-drop/", views_reserve.EveryDropView.as_view()),
+    path("reserve/<str:token>/feedback/", views_reserve.FeedbackView.as_view()),
     # Host sites
     path("host/drops/", views.HostDropListView.as_view()),
     path("host/reservations/", views.HostReservationListView.as_view()),
