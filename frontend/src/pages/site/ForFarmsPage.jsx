@@ -1,21 +1,11 @@
 import SignupForm from '../../components/SignupForm'
+import { useSiteText } from '../../siteText'
 
-const BENEFITS = [
-  {
-    title: 'Earn From Your Seconds Produce',
-    text: 'Our farmers earn cash from produce that would otherwise be sent to landfills or reploughed. This produce is less than cosmetically perfect but is still healthy and edible.',
-  },
-  {
-    title: 'Consistent Orders',
-    text: "We order our produce 24 times a year, generally bi-weekly. If you don't have seconds produce that week, no worries, we understand!",
-  },
-  {
-    title: 'Social Good',
-    text: 'We sell to communities at reduced prices and promote social entrepreneurship to solve food insecurity.',
-  },
-]
+// The words are editable on the admin Website Text screen (see siteText.jsx).
+const BENEFITS = ['farms.benefit1', 'farms.benefit2', 'farms.benefit3']
 
 export default function ForFarmsPage() {
+  const text = useSiteText()
   return (
     <>
       <section className="title-block title-block-compact">
@@ -25,10 +15,10 @@ export default function ForFarmsPage() {
       <section className="benefits" style={{ backgroundImage: 'url(/photos/field-rows.jpg)' }}>
         <ol className="benefit-cards">
           {BENEFITS.map((benefit, index) => (
-            <li key={benefit.title}>
+            <li key={benefit}>
               <span className="benefit-number">{index + 1}</span>
-              <h3>{benefit.title}</h3>
-              <p>{benefit.text}</p>
+              <h3>{text(benefit + '.title')}</h3>
+              <p>{text(benefit + '.text')}</p>
             </li>
           ))}
         </ol>
@@ -38,10 +28,7 @@ export default function ForFarmsPage() {
         <img className="form-split-photo" src="/photos/market-potatoes.jpg" alt="Seconds potatoes and beets ready to sell" />
         <div className="form-split-form">
           <h2>Interested?</h2>
-          <p>
-            Sign up to sell us your seconds produce. Once we approve your account, you can post what you have available
-            and see our orders in the partner portal.
-          </p>
+          <p>{text('farms.interested')}</p>
           <SignupForm roleSlug="farm" />
         </div>
       </section>

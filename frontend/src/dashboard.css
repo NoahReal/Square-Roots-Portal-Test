@@ -783,3 +783,13 @@
 .customer-feedback li {
   padding: 4px 0;
 }
+
+/* Website Text */
+
+.text-block {
+  margin-bottom: 16px;
+}
+
+.text-block .field {
+  margin-bottom: 12px;
+}

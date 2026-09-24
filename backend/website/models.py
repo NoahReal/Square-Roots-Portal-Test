@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -59,3 +60,19 @@ class AreaRequest(models.Model):
     def area(self):
         """The first half of the postal code (e.g. "B3H"), which covers a neighbourhood or small town."""
         return self.postal_code[:3]
+
+
+class PageText(models.Model):
+    """A block of website text the Square Roots team has changed on the Website Text screen.
+
+    The original wording lives in the website's code (frontend/src/siteText.js); a row here
+    replaces it. Deleting the row goes back to the original.
+    """
+
+    key = models.CharField(max_length=100, unique=True, help_text="Which block, e.g. about.intro")
+    text = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __str__(self):
+        return self.key

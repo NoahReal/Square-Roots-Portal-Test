@@ -3,6 +3,7 @@ import PartnerPortalBand from '../../components/PartnerPortalBand'
 import PartnersSection from '../../components/PartnersSection'
 import ReserveFeature from '../../components/ReserveFeature'
 import RotatingTagline from '../../components/RotatingTagline'
+import { useSiteText } from '../../siteText'
 
 const PHOTO_STRIP = [
   { src: '/photos/boxes-apples-carrots.jpg', alt: 'Boxes of apples, carrots and potatoes' },
@@ -13,11 +14,12 @@ const PHOTO_STRIP = [
 ]
 
 export default function HomePage() {
+  const text = useSiteText()
   return (
     <>
       <section className="home-hero" style={{ backgroundImage: 'url(/photos/brussels-sprouts.jpg)' }}>
         <div className="home-hero-inner">
-          <h1>A Community Interest Company Addressing Food Insecurity</h1>
+          <h1>{text('home.hero')}</h1>
           <div className="hero-buttons">
             <Link to="/signup" className="btn btn-on-dark">
               Get Involved
@@ -33,48 +35,41 @@ export default function HomePage() {
 
       <FeatureBlock
         label="Mission"
-        subtitle="Reducing Food Waste, Increasing Food Security"
+        subtitle={text('home.mission.subtitle')}
         photo="/photos/market-potatoes.jpg"
         photoAlt="Potatoes and beets for sale at a Square Roots market"
         link={{ to: '/about', text: 'About Us' }}
       >
-        Square Roots connects perfectly healthy produce that doesn't meet the cosmetic standards of grocery stores to
-        community members in need. This produce is diverted from being reploughed into fields or wasted in landfills
-        and becomes part of healthy, nutritious meals for Canadians.
+        {text('home.mission.text')}
       </FeatureBlock>
 
       <FeatureBlock
         label="Impact"
-        subtitle="Redistributing Seconds Produce, Providing Opportunities for Entrepreneurship"
+        subtitle={text('home.impact.subtitle')}
         photo="/photos/food-waste-shirt.jpg"
         photoAlt="A volunteer in an “All my friends hate food waste” shirt beside boxes of carrots"
         photoFirst
         photoPosition="80% center"
         link={{ to: '/drop-dates-locations', text: 'Drop Dates & Locations' }}
       >
-        Through our various locations around Nova Scotia, independent Community Managers sell bundles at affordable
-        prices.
+        {text('home.impact.text')}
       </FeatureBlock>
 
       <FeatureBlock
         label="Support"
-        subtitle="Join Us in Creating a Hunger-Free Canada"
+        subtitle={text('home.support.subtitle')}
         photo="/photos/produce-bag.jpg"
         photoAlt="A Square Roots bag filled with apples, cucumbers, corn and potatoes"
         link={{ to: '/signup', text: 'Get Involved' }}
       >
-        Your involvement can make a real difference in the lives of individuals and families facing food insecurity.
-        Together, we can build a future where everyone has access to an abundance of nutritious food.
+        {text('home.support.text')}
       </FeatureBlock>
 
       <section className="enactus-section">
         <div className="container enactus-inner">
           <div>
             <h2>Enactus Saint Mary's</h2>
-            <p>
-              Square Roots was developed and is run by students from Enactus Saint Mary's with help from advisors at
-              the university
-            </p>
+            <p>{text('home.enactus')}</p>
             <a
               className="btn btn-on-dark"
               href="https://arthurlirvingentrepreneurshipcentre.ca/for-students/enactus-saint-marys/"

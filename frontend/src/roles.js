@@ -20,6 +20,7 @@ export const ROLES = {
       { to: '/portal/admin/signups', label: 'Sign-ups', more: true, description: 'Approve or decline people who signed up on the website.' },
       { to: '/portal/admin/people', label: 'People', more: true, description: 'Everyone with an account: their location or farm, access and passwords.' },
       { to: '/portal/admin/locations', label: 'Locations', more: true, description: 'Add and edit Square Roots locations shown on the website.' },
+      { to: '/portal/admin/website-text', label: 'Website Text', more: true, description: 'Change the words on the public website.' },
       { to: '/portal/admin/events', label: 'Events', more: true, description: 'Add events to the public Events page.' },
       { to: '/portal/admin/area-requests', label: 'Location Requests', more: true, description: 'Where people are asking for a location near them.' },
       { to: '/portal/admin/settings', label: 'Settings', more: true, description: 'Bundle prices, first-drop price, delivery fee and sorting space.' },

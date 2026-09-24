@@ -22,7 +22,7 @@ from drops.models import (
     new_manage_token,
 )
 from farms.models import Farm, FarmOrder, FarmOrderLine, ProduceListing
-from website.models import AreaRequest, ContactMessage, Event
+from website.models import AreaRequest, ContactMessage, Event, PageText
 
 DEMO_PASSWORD = "squareroots"
 
@@ -215,6 +215,7 @@ class Command(BaseCommand):
         ContactMessage.objects.all().delete()
         Event.objects.all().delete()
         AreaRequest.objects.all().delete()
+        PageText.objects.all().delete()  # back to the original website text
 
     def create_sites(self):
         # Prices from Square Roots: $10 standard, $7.50 at cost, free bundles, $1.99 delivery.

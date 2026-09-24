@@ -1,23 +1,18 @@
 import SignupForm from '../../components/SignupForm'
+import { useSiteText } from '../../siteText'
 
 export default function BecomeCommunityManagerPage() {
+  const text = useSiteText()
   return (
     <>
       <section className="title-block title-block-left">
-        <h1>So you want to become a Community Manager...</h1>
-        <p>
-          As a Community Manager, you'll be essential in forming relationships with your community and listening to how
-          Square Roots can best provide for their produce needs. You'll order produce bi-weekly or monthly from the
-          order forms we send you. Any revenue above the produce cost and our commission is entirely yours!
-        </p>
+        <h1>{text('cm.title')}</h1>
+        <p>{text('cm.intro')}</p>
       </section>
 
       <section className="centered-intro">
         <h2>Become a Community Manager</h2>
-        <p>
-          Just send us your contact info, where you'd like to start a location, and include an optional message and
-          we'll get back to you as soon as possible.
-        </p>
+        <p>{text('cm.apply')}</p>
       </section>
 
       <section className="form-split" id="apply">

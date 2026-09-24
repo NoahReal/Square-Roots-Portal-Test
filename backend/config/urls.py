@@ -21,6 +21,8 @@ urlpatterns = [
     path("api/", include("farms.urls")),
     path("api/contact/", website_views.ContactView.as_view()),
     path("api/area-requests/", website_views.AreaRequestView.as_view()),
+    path("api/site-text/", website_views.SiteTextView.as_view()),
+    path("api/admin/site-text/", website_views.AdminSiteTextView.as_view()),
     path("api/admin/area-requests/", website_views.AdminAreaRequestView.as_view()),
     path("api/admin/area-requests/<int:pk>/", website_views.AdminAreaRequestDetailView.as_view()),
     path("api/events/", website_views.PublicEventsView.as_view()),

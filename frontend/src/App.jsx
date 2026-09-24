@@ -22,6 +22,7 @@ import BundlePage from './pages/site/BundlePage'
 import PrivacyPage from './pages/site/PrivacyPage'
 import RequestLocationPage from './pages/site/RequestLocationPage'
 import AreaRequestsPage from './pages/portal/admin/AreaRequestsPage'
+import WebsiteTextPage from './pages/portal/admin/WebsiteTextPage'
 import HostReservePage from './pages/portal/host/HostReservePage'
 
 // Partner portal (everything under /portal)
@@ -79,6 +80,7 @@ const PAGES = {
   '/portal/admin/packing': PackingPage,
   '/portal/admin/settings': SettingsPage,
   '/portal/admin/area-requests': AreaRequestsPage,
+  '/portal/admin/website-text': WebsiteTextPage,
   '/portal/manager/order': OrderPage,
   '/portal/manager/preorders': PreordersPage,
   '/portal/manager/after-drop': AfterDropPage,

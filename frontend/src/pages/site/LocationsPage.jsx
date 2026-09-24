@@ -4,6 +4,7 @@ import { api } from '../../api'
 import { longDate, money, timeRange } from '../../format'
 import { usePricing } from '../../pricing'
 import { FacebookIcon, InstagramIcon } from '../../components/Icons'
+import { useSiteText } from '../../siteText'
 
 // Drop dates come from the drop cycles in the portal, grouped by month like the
 // live site shows them: "Oct 10 & 24".
@@ -24,6 +25,7 @@ function directionsUrl(site) {
 }
 
 export default function LocationsPage() {
+  const text = useSiteText()
   const [sites, setSites] = useState(null)
   const [dropDates, setDropDates] = useState(null)
 
@@ -41,7 +43,7 @@ export default function LocationsPage() {
         <div className="locations-card">
           <div>
             <h1>Locations</h1>
-            <p>Independent Community Managers operate drops bi-weekly at locations around Nova Scotia.</p>
+            <p>{text('locations.intro')}</p>
             <Link to="/become-a-community-manager" className="btn btn-small">
               Become a Community Manager
             </Link>

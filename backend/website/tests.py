@@ -78,3 +78,19 @@ class AreaRequestTests(TestCase):
             (areas[0]["area"], areas[0]["requests"], areas[0]["could_help"], areas[0]["towns"]), ("B4N", 2, 1, ["Kentville"])
         )
         self.assertIn("would like to help", mail.outbox[-1].subject)
+
+
+class SiteTextTests(TestCase):
+    def test_admin_changes_text_and_can_reset_it(self):
+        admin = APIClient()
+        admin.force_authenticate(User.objects.create_user("admin.test", role=User.Role.ADMIN))
+        admin.put("/api/admin/site-text/", {"key": "about.intro", "text": "New words."}, format="json")
+        self.assertEqual(APIClient().get("/api/site-text/").data, {"about.intro": "New words."})
+        self.assertEqual(admin.put("/api/admin/site-text/", {"key": "about.intro", "text": " "}, format="json").status_code, 400)
+        admin.delete("/api/admin/site-text/", {"key": "about.intro"}, format="json")
+        self.assertEqual(APIClient().get("/api/site-text/").data, {})
+
+    def test_only_admins_can_change_text(self):
+        manager = APIClient()
+        manager.force_authenticate(User.objects.create_user("cm.test", role=User.Role.COMMUNITY_MANAGER))
+        self.assertEqual(manager.put("/api/admin/site-text/", {"key": "about.intro", "text": "x"}, format="json").status_code, 403)

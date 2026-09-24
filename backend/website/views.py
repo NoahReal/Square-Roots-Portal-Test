@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -13,7 +14,7 @@ from rest_framework.views import APIView
 
 from accounts.notifications import notify_team
 from accounts.permissions import IsAdminRole
-from .models import AreaRequest, ContactMessage, Event
+from .models import AreaRequest, ContactMessage, Event, PageText
 
 
 class ContactMessageSerializer(serializers.ModelSerializer):
@@ -185,3 +186,39 @@ class AdminAreaRequestDetailView(APIView):
     def delete(self, request, pk):
         get_object_or_404(AreaRequest, pk=pk).delete()
         return Response(status=204)
+
+
+# ---------- Website text the team can edit ----------
+
+KEY = re.compile(r"^[a-z0-9_.-]{1,100}$")
+
+
+class SiteTextView(APIView):
+    """Website text the Square Roots team has changed, as {block: text}. Public: the website reads it when it loads."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({block.key: block.text for block in PageText.objects.all()})
+
+
+class AdminSiteTextView(APIView):
+    """Changes a block of website text (PUT {key, text}), or puts it back to the original (DELETE {key}) (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def put(self, request):
+        key = request.data.get("key") or ""
+        text = (request.data.get("text") or "").strip()
+        if not KEY.match(key):
+            raise ValidationError({"key": "Unknown text block."})
+        if not text:
+            raise ValidationError({"text": "The text can't be empty. Use “Reset to the original” instead."})
+        if len(text) > 3000:
+            raise ValidationError({"text": "Please keep this under 3,000 characters."})
+        PageText.objects.update_or_create(key=key, defaults={"text": text, "updated_by": request.user})
+        return SiteTextView().get(request)
+
+    def delete(self, request):
+        PageText.objects.filter(key=request.data.get("key") or "").delete()
+        return SiteTextView().get(request)
