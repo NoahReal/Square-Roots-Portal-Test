@@ -915,3 +915,22 @@
     border: 1px solid #999;
   }
 }
+
+/* Two-step login on My Account */
+
+.two-step-steps {
+  padding-left: 22px;
+}
+
+.two-step-steps li {
+  margin-bottom: 8px;
+}
+
+.two-step-key {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--sr-cream);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  overflow-wrap: anywhere;
+}

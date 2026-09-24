@@ -25,6 +25,8 @@ class User(AbstractUser):
     site = models.ForeignKey("drops.Site", null=True, blank=True, on_delete=models.SET_NULL, related_name="people")
     # The farm a Farm-role user works for.
     farm = models.ForeignKey("farms.Farm", null=True, blank=True, on_delete=models.SET_NULL, related_name="people")
+    # Set when two-step login is on (see accounts/two_step.py). Blank means password only.
+    two_step_secret = models.CharField(max_length=64, blank=True)
 
     @property
     def is_approved(self):

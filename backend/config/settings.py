@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -90,8 +91,14 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
-    # Public forms that anyone can send (like reserving a bundle) are limited per visitor, to stop spam.
-    'DEFAULT_THROTTLE_RATES': {'reservations': '30/hour'},
+    # Public forms that anyone can send are limited per visitor, to stop spam and password guessing.
+    'DEFAULT_THROTTLE_RATES': {
+        'reservations': '30/hour',
+        'login': '20/minute',
+        'signup': '10/hour',
+        'contact': '10/hour',
+        'password_reset': '5/hour',
+    },
 }
 
 # Demo mode shows the demo accounts on the login page and labels the made-up data.
@@ -166,3 +173,9 @@ MAILERS = {
         'BACKEND': 'accounts.email_backend.ReadableConsoleBackend',
     },
 }
+
+
+# Tests don't share a cache, so request limits from one test never affect another.
+# (Tests of the limits themselves switch a real cache back on.)
+if len(sys.argv) > 1 and sys.argv[1] == 'test':
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}}

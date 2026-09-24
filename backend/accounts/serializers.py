@@ -11,13 +11,17 @@ class UserSerializer(serializers.ModelSerializer):
     status_label = serializers.CharField(source="get_status_display", read_only=True)
     site_name = serializers.CharField(source="site.name", default=None, read_only=True)
     farm_name = serializers.CharField(source="farm.name", default=None, read_only=True)
+    two_step = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             "id", "username", "first_name", "last_name", "email", "phone", "role", "role_label",
-            "status", "status_label", "site_name", "farm_name",
+            "status", "status_label", "site_name", "farm_name", "two_step",
         ]
+
+    def get_two_step(self, user):
+        return bool(user.two_step_secret)
 
 
 class AccountSerializer(serializers.ModelSerializer):

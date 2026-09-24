@@ -42,8 +42,9 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired)
   }, [])
 
-  async function login(username, password) {
-    const loggedIn = await api('/auth/login/', { method: 'POST', body: { username, password } })
+  // `code` is the 6-digit code from an authenticator app, for accounts with two-step login.
+  async function login(username, password, code) {
+    const loggedIn = await api('/auth/login/', { method: 'POST', body: { username, password, code } })
     setUser(loggedIn)
     return loggedIn
   }

@@ -12,21 +12,33 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // Accounts with two-step login need a code from their authenticator app too.
+  const [needsCode, setNeedsCode] = useState(false)
+  const [code, setCode] = useState('')
 
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
     setBusy(true)
     try {
-      const user = await login(username, password)
+      const user = await login(username, password, needsCode ? code : undefined)
       navigate(homeFor(user))
     } catch (err) {
-      setError(err.message)
+      if (err.data?.needs_code) {
+        // The first time, just ask for the code; after that, say it was wrong.
+        if (needsCode) setError(err.message)
+        setNeedsCode(true)
+        setTimeout(() => document.getElementById('code')?.focus())
+      } else {
+        setError(err.message)
+      }
       setBusy(false)
     }
   }
 
   function fillDemoAccount(account) {
+    setNeedsCode(false)
+    setCode('')
     setUsername(account.username)
     setPassword(DEMO_PASSWORD)
     setError('')
@@ -72,6 +84,21 @@ export default function LoginPage() {
                 required
               />
             </div>
+            {needsCode && (
+              <div className="field">
+                <label htmlFor="code">
+                  6-digit code <span className="field-hint">(from your authenticator app)</span>
+                </label>
+                <input
+                  id="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                />
+              </div>
+            )}
             <button className="btn btn-primary btn-block" disabled={busy}>
               {busy ? 'Logging in…' : 'Log in'}
             </button>

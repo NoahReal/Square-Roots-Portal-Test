@@ -15,6 +15,7 @@ export default function AccountPage() {
         <div className="container account-layout">
           <DetailsForm />
           <PasswordForm />
+          <TwoStepBlock />
         </div>
       </section>
     </>
@@ -154,5 +155,121 @@ function PasswordForm() {
         {busy ? 'Saving…' : 'Change password'}
       </button>
     </form>
+  )
+}
+
+// Two-step login: a 6-digit code from an authenticator app on top of the password.
+// Recommended for admins, since they can see everyone's details.
+function TwoStepBlock() {
+  const { user, refreshUser } = useAuth()
+  const [setup, setSetup] = useState(null)
+  const [code, setCode] = useState('')
+  const [password, setPassword] = useState('')
+  const [turningOff, setTurningOff] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState('')
+
+  async function start() {
+    setError('')
+    setDone('')
+    setSetup(await api('/auth/two-step/', { method: 'POST', body: {} }))
+  }
+
+  async function finish(event) {
+    event.preventDefault()
+    try {
+      refreshUser(await api('/auth/two-step/', { method: 'POST', body: { code } }))
+      setSetup(null)
+      setCode('')
+      setDone('Two-step login is on. Next time you log in, you’ll need a code from your app.')
+    } catch (err) {
+      setError([].concat(err.data?.code ?? err.message).join(' '))
+    }
+  }
+
+  async function turnOff(event) {
+    event.preventDefault()
+    try {
+      refreshUser(await api('/auth/two-step/', { method: 'DELETE', body: { password } }))
+      setTurningOff(false)
+      setPassword('')
+      setDone('Two-step login is off.')
+    } catch (err) {
+      setError([].concat(err.data?.password ?? err.message).join(' '))
+    }
+  }
+
+  return (
+    <div className="block block-white two-step">
+      <h2>Two-step login</h2>
+      {done && (
+        <div className="notice notice-success" role="status">
+          {done}
+        </div>
+      )}
+      {user.two_step ? (
+        <>
+          <p>
+            <strong>On.</strong> Logging in needs your password and a 6-digit code from your authenticator app.
+          </p>
+          {turningOff ? (
+            <form onSubmit={turnOff} noValidate>
+              <div className="field">
+                <label htmlFor="two-step-password">Your password, to turn it off</label>
+                <input id="two-step-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                {error && <p className="field-error">{error}</p>}
+              </div>
+              <div className="button-row">
+                <button className="btn btn-primary">Turn off</button>
+                <button type="button" className="btn" onClick={() => setTurningOff(false)}>
+                  Keep it on
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button className="link-button" onClick={() => setTurningOff(true)}>
+              Turn off two-step login
+            </button>
+          )}
+        </>
+      ) : setup ? (
+        <form onSubmit={finish} noValidate>
+          <ol className="two-step-steps">
+            <li>
+              Open an authenticator app on your phone (Google Authenticator, Microsoft Authenticator or 1Password all
+              work).
+            </li>
+            <li>
+              On your phone, <a href={setup.app_link}>tap here to add Square Roots</a>. Or add an account by hand with
+              this key: <code className="two-step-key">{setup.secret.match(/.{1,4}/g).join(' ')}</code>
+            </li>
+            <li>Type the 6-digit code the app shows:</li>
+          </ol>
+          <div className="field">
+            <label htmlFor="two-step-code">6-digit code</label>
+            <input
+              id="two-step-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            />
+            {error && <p className="field-error">{error}</p>}
+          </div>
+          <button className="btn btn-primary">Turn on</button>
+        </form>
+      ) : (
+        <>
+          <p>
+            Add a 6-digit code from your phone to your password, so nobody can log in with your password alone.
+            {user.role === 'admin' && ' Recommended for admins, since you can see everyone’s details.'}
+          </p>
+          <button className="btn" onClick={start}>
+            Set up two-step login
+          </button>
+        </>
+      )}
+    </div>
   )
 }

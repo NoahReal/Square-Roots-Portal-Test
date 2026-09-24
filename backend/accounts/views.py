@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -14,12 +15,14 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from drops.models import Site
 from farms.models import Farm
 from .models import Application, User
 from .notifications import notify_person, notify_team
+from . import two_step
 from .permissions import IsAdminRole
 from .serializers import AccountSerializer, ApplicationSerializer, SignupSerializer, UserSerializer
 
@@ -59,18 +62,77 @@ class CsrfView(APIView):
         return Response({"ok": True, "demo_mode": settings.DEMO_MODE})
 
 
+# After this many wrong passwords for one username, it's locked for LOCKOUT_MINUTES,
+# so nobody can keep guessing (on top of the per-device limit in settings.py).
+MAX_WRONG_PASSWORDS = 10
+LOCKOUT_MINUTES = 15
+
+
+def wrong_password_key(username):
+    return f"wrong-passwords:{(username or '').strip().lower()}"
+
+
 @method_decorator(csrf_protect, name="dispatch")
 class LoginView(APIView):
-    """Logs in with a username and password, and returns who you are."""
+    """Logs in with a username and password (and a 6-digit code, if two-step login is on). Returns who you are."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
     def post(self, request):
-        user, _reason = check_credentials(request, request.data.get("username"), request.data.get("password"))
+        username = request.data.get("username")
+        key = wrong_password_key(username)
+        if cache.get(key, 0) >= MAX_WRONG_PASSWORDS:
+            return Response(
+                {"detail": f"Too many wrong passwords. Try again in {LOCKOUT_MINUTES} minutes, or reset your password."},
+                status=429,
+            )
+        user, _reason = check_credentials(request, username, request.data.get("password"))
         if user is None:
+            cache.set(key, cache.get(key, 0) + 1, LOCKOUT_MINUTES * 60)
             return Response({"detail": "That username and password don't match."}, status=400)
+        if user.two_step_secret:
+            code = request.data.get("code")
+            if not code:
+                return Response({"detail": "Enter the 6-digit code from your authenticator app.", "needs_code": True}, status=400)
+            if not two_step.check_code(user.two_step_secret, code):
+                cache.set(key, cache.get(key, 0) + 1, LOCKOUT_MINUTES * 60)
+                return Response({"detail": "That code isn't right. Check your app and try again.", "needs_code": True}, status=400)
+        cache.delete(key)
         login(request, user)
         return Response(UserSerializer(user).data)
+
+
+class TwoStepView(APIView):
+    """Turns two-step login on or off for your own account.
+
+    POST with no code starts: it returns a secret to add to your authenticator app.
+    POST with the app's 6-digit code finishes turning it on. DELETE (with your password) turns it off.
+    """
+
+    def post(self, request):
+        code = request.data.get("code")
+        if not code:
+            secret = two_step.new_secret()
+            request.session["two_step_pending"] = secret
+            return Response({"secret": secret, "app_link": two_step.app_link(secret, request.user.username)})
+        secret = request.session.get("two_step_pending")
+        if not secret:
+            raise ValidationError({"detail": "Start again: we couldn't find the setup you began."})
+        if not two_step.check_code(secret, code):
+            raise ValidationError({"code": "That code isn't right. Check the app shows Square Roots, and try the newest code."})
+        request.user.two_step_secret = secret
+        request.user.save(update_fields=["two_step_secret"])
+        del request.session["two_step_pending"]
+        return Response(UserSerializer(request.user).data)
+
+    def delete(self, request):
+        if not request.user.check_password(request.data.get("password") or ""):
+            raise ValidationError({"password": "That's not your current password."})
+        request.user.two_step_secret = ""
+        request.user.save(update_fields=["two_step_secret"])
+        return Response(UserSerializer(request.user).data)
 
 
 class LogoutView(APIView):
@@ -150,6 +212,8 @@ class PasswordResetRequestView(APIView):
     """Emails a password reset link to whoever uses this email address."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
 
     def post(self, request):
         email = (request.data.get("email") or "").strip()
@@ -202,6 +266,8 @@ class SignupView(APIView):
     """Signs up a Community Manager, Farm or Host Site from the website. The account waits for admin approval."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "signup"
 
     def post(self, request):
         serializer = SignupSerializer(data=request.data)

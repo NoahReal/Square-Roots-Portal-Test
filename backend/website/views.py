@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from accounts.notifications import notify_team
@@ -24,6 +25,8 @@ class ContactView(APIView):
     """Sends a message from the public Contact Us form to the Square Roots team."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "contact"
 
     def post(self, request):
         serializer = ContactMessageSerializer(data=request.data)
