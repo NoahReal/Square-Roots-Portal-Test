@@ -18,19 +18,36 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+# Running on your own computer, nothing needs setting. When the site is hosted, these come from
+# environment variables (see HOSTING.md):
+#   DJANGO_DEBUG=0                     production mode
+#   DJANGO_SECRET_KEY=...              a long random secret, never in git
+#   DJANGO_ALLOWED_HOSTS=squarerootssmu.ca,www.squarerootssmu.ca
+DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ow6wqx!hkg3-zykg#8jm)n8c+%+7z$gcz3q)i3=gjip7p^s29$'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise RuntimeError('Set DJANGO_SECRET_KEY before running in production (see HOSTING.md).')
+    SECRET_KEY = 'django-insecure-only-for-local-development'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+# The browser's address has to be trusted for logins and forms to work over HTTPS.
+CSRF_TRUSTED_ORIGINS = [f'https://{host}' for host in ALLOWED_HOSTS if host not in ('localhost', '127.0.0.1')]
 
 # The React dev server (Vite) forwards /api here, so requests arrive as
 # localhost:<vite port> and Django treats them as same-origin.
+
+if not DEBUG:
+    # Only send cookies over HTTPS, and tell browsers to always use HTTPS.
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = os.environ.get('DJANGO_SSL_REDIRECT', '1') == '1'
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+    # Most hosts sit behind a proxy that handles HTTPS and says so in this header.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
 
 
 # Application definition
@@ -52,6 +69,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serves the built website (frontend/dist) and Django's own files when hosted. See HOSTING.md.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -154,13 +173,23 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # `manage.py collectstatic` puts Django's own files here
+
+# When hosted, Django also serves the React website: build it with `npm run build` in frontend/,
+# and every file in frontend/dist is served at the site's root (see config/urls.py for the pages).
+FRONTEND_DIST = BASE_DIR.parent / 'frontend' / 'dist'
+WHITENOISE_ROOT = FRONTEND_DIST if FRONTEND_DIST.exists() else None
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
+}
 
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-# Stubbed email: emails are printed in the runserver terminal as readable text (see
-# accounts/email_backend.py). To send real email, swap in an SMTP backend here.
+# Locally, emails are printed in the runserver terminal as readable text (see accounts/email_backend.py).
+# To send real email, set EMAIL_HOST and the rest from your email provider (see HOSTING.md).
 DEFAULT_FROM_EMAIL = 'Square Roots <squareroots@enactussmu.ca>'
 TEAM_EMAIL = 'squareroots@enactussmu.ca'  # where sign-up and contact notifications go
 
@@ -168,10 +197,34 @@ TEAM_EMAIL = 'squareroots@enactussmu.ca'  # where sign-up and contact notificati
 CUSTOMER_DETAILS_KEPT_DAYS = 60   # after a customer's drop
 CONTACT_MESSAGES_KEPT_DAYS = 365  # Contact Us messages
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'accounts.email_backend.ReadableConsoleBackend',
-    },
+if os.environ.get('EMAIL_HOST'):
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'OPTIONS': {
+                'host': os.environ['EMAIL_HOST'],
+                'port': int(os.environ.get('EMAIL_PORT', '587')),
+                'username': os.environ.get('EMAIL_USER', ''),
+                'password': os.environ.get('EMAIL_PASSWORD', ''),
+                'use_tls': True,
+                'timeout': 20,
+            },
+        },
+    }
+    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_FROM', DEFAULT_FROM_EMAIL)
+else:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'accounts.email_backend.ReadableConsoleBackend',
+        },
+    }
+
+# Errors on the hosted site are written to the host's log (the terminal running gunicorn).
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'root': {'handlers': ['console'], 'level': 'WARNING'},
 }
 
 

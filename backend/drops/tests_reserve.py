@@ -443,3 +443,26 @@ class FeedbackAndImpactTests(ReserveTestCase):
         past = make_drop(self.site, -14, cutoff_days_from_now=-18)
         Preorder.objects.create(site_drop=past, customer_name="Alex", email="ALEX@example.com", bundles=2, picked_up=True)
         self.assertEqual(self.reserve().data["impact"], {"bundles": 2, "pounds": 20})
+
+
+class BackupTests(ReserveTestCase):
+    def test_backup_copies_the_database_and_keeps_the_newest(self):
+        import shutil
+        import tempfile
+        from io import StringIO
+        from pathlib import Path
+
+        from django.core.management import call_command
+
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder)
+        for day in range(3):
+            (folder / f"db-2026-01-0{day + 1}-0300.sqlite3").write_text("old")
+        with self.settings(DATABASES={"default": {"NAME": folder / "db.sqlite3"}}):
+            import sqlite3
+
+            sqlite3.connect(folder / "db.sqlite3").execute("create table t (x)").connection.commit()
+            call_command("backup_database", "--keep", "2", "--folder", str(folder), stdout=StringIO())
+        copies = sorted(p.name for p in folder.glob("db-*.sqlite3"))
+        self.assertEqual(len(copies), 2)
+        self.assertNotIn("db-2026-01-01-0300.sqlite3", copies)

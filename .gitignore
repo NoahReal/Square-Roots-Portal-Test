@@ -20,3 +20,7 @@ frontend/dist/
 
 # Photos of real people (not the public website photos). Kept on this computer only.
 frontend/public/photos/evan-payne.png
+
+# Database backups and collected static files, made on the server
+backend/backups/
+backend/staticfiles/

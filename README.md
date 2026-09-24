@@ -26,6 +26,12 @@ licensed for Wix sites only.
 | **Host Site** | See upcoming drop dates at their location, and reserve bundles for people they support |
 | **Customers** (no account) | Reserve bundles on the website, then change or cancel them from a private link |
 
+## Putting it online
+
+It isn't hosted yet. **[HOSTING.md](HOSTING.md)** is the step-by-step plan: production settings,
+real email, the three scheduled jobs (reminders, removing old customer details, backups) and a
+checklist before real people use it.
+
 ## Setup
 
 You need **Python 3.12+** and **Node 20+**. Run the backend and frontend in two terminal windows.
