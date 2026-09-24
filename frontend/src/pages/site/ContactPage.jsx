@@ -85,6 +85,9 @@ export default function ContactPage() {
             <button className="btn btn-primary" disabled={busy}>
               {busy ? 'Sending…' : 'Send'}
             </button>
+            <p className="form-footnote">
+              We keep messages for one year. <Link to="/privacy">Privacy</Link>
+            </p>
           </form>
         </div>
       </section>

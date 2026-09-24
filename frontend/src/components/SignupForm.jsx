@@ -134,7 +134,7 @@ export default function SignupForm({ roleSlug }) {
       </button>
       <p className="form-footnote">
         We'll review your application and email you when your account is approved. Already have an account?{' '}
-        <Link to="/portal/login">Log in</Link>
+        <Link to="/portal/login">Log in</Link>. How we use your details: <Link to="/privacy">Privacy</Link>
       </p>
     </form>
   )

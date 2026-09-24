@@ -348,3 +348,18 @@ class HostReservationTests(ReserveTestCase):
         self.reserve(bundles=3, join_waitlist=True)
         self.host.delete(f"/api/host/reservations/{made['id']}/")
         self.assertEqual(Preorder.objects.get().customer_name, "Alex B.")
+
+
+class ForgetOldDetailsTests(ReserveTestCase):
+    def test_details_are_removed_60_days_after_the_drop(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        old = make_drop(self.site, -61, cutoff_days_from_now=-65)
+        Preorder.objects.create(site_drop=old, customer_name="Alex B.", email="alex@example.com", phone="902-555-0100", paid=True)
+        self.reserve()  # an upcoming reservation stays as it is
+        call_command("forget_old_details", stdout=StringIO())
+        forgotten = Preorder.objects.get(site_drop=old)
+        self.assertEqual((forgotten.customer_name, forgotten.email, forgotten.phone, forgotten.paid), ("Customer (details removed)", "", "", True))
+        self.assertEqual(Preorder.objects.get(site_drop=self.drop).email, "alex@example.com")

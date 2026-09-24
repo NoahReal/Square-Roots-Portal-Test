@@ -1814,3 +1814,22 @@
   font-weight: 500;
   cursor: pointer;
 }
+
+/* Privacy page */
+
+.privacy-page h2 {
+  margin: 32px 0 8px;
+  font-size: 1.5rem;
+}
+
+.privacy-page ul {
+  padding-left: 22px;
+}
+
+.privacy-back {
+  margin-top: 32px;
+}
+
+.copyright a {
+  color: inherit;
+}

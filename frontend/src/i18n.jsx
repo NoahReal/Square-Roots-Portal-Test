@@ -86,7 +86,8 @@ const WORDS = {
     joinWaitlist: 'Join the waitlist',
     reserveN: (n) => `Reserve ${n === 1 ? '1 bundle' : `${n} bundles`}`,
     privacy:
-      'Your details go only to your Community Manager and the Square Roots team, and are used only for this reservation. If you cancel, they’re deleted.',
+      'Your details go only to your Community Manager and the Square Roots team, and are used only for this reservation. We remove them 60 days after your drop, or right away if you cancel. ',
+    privacyLink: 'Read our privacy policy',
     errName: 'Please add your name.',
     errContact: 'Add an email or a phone number, so we can reach you if plans change.',
     errAddress: 'Add the address to deliver to.',
@@ -256,7 +257,8 @@ const WORDS = {
     joinWaitlist: 'M’inscrire sur la liste d’attente',
     reserveN: (n) => `Réserver ${n === 1 ? '1 panier' : `${n} paniers`}`,
     privacy:
-      'Vos coordonnées sont transmises seulement à votre gestionnaire communautaire et à l’équipe de Square Roots, et servent seulement à cette réservation. Si vous annulez, elles sont supprimées.',
+      'Vos coordonnées sont transmises seulement à votre gestionnaire communautaire et à l’équipe de Square Roots, et servent seulement à cette réservation. Nous les supprimons 60 jours après la distribution, ou tout de suite si vous annulez. ',
+    privacyLink: 'Lire notre politique de confidentialité (en anglais)',
     errName: 'Veuillez indiquer votre nom.',
     errContact: 'Indiquez un courriel ou un numéro de téléphone, pour qu’on puisse vous joindre en cas de changement.',
     errAddress: 'Indiquez l’adresse de livraison.',

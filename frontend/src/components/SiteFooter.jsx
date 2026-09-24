@@ -50,7 +50,8 @@ export default function SiteFooter({ inPortal = false }) {
         </div>
       </footer>
       <div className="copyright">
-        © {new Date().getFullYear()} Square Roots C.I.C.{inPortal && ' · Partner Portal'}
+        © {new Date().getFullYear()} Square Roots C.I.C.{inPortal && ' · Partner Portal'} ·{' '}
+        <Link to="/privacy">Privacy</Link>
       </div>
     </>
   )

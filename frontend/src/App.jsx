@@ -19,6 +19,7 @@ import NotFoundPage from './pages/site/NotFoundPage'
 import ReservePage from './pages/site/ReservePage'
 import ManageReservationPage from './pages/site/ManageReservationPage'
 import BundlePage from './pages/site/BundlePage'
+import PrivacyPage from './pages/site/PrivacyPage'
 import HostReservePage from './pages/portal/host/HostReservePage'
 
 // Partner portal (everything under /portal)
@@ -108,6 +109,7 @@ const PUBLIC_TITLES = {
   '/contact-us': 'Contact Us',
   '/reserve': 'Reserve a Bundle',
   '/whats-in-the-bundle': 'What’s in the Bundle',
+  '/privacy': 'Privacy',
   '/signup': 'Partner Sign-up',
   '/portal/login': 'Log in',
   '/portal/pending': 'Application received',
@@ -162,6 +164,7 @@ export default function App() {
             <Route path="/reserve" element={<ReservePage />} />
             <Route path="/reserve/manage/:token" element={<ManageReservationPage />} />
             <Route path="/whats-in-the-bundle" element={<BundlePage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
 
             <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
             <Route path="/portal/pending" element={<PendingPage />} />

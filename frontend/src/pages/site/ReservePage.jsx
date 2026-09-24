@@ -294,7 +294,10 @@ export default function ReservePage() {
                       {busy ? t.oneMoment : full ? t.joinWaitlist : t.reserveN(bundles)}
                     </button>
                   </div>
-                  <p className="reserve-privacy">{t.privacy}</p>
+                  <p className="reserve-privacy">
+                    {t.privacy}
+                    <Link to="/privacy">{t.privacyLink}</Link>
+                  </p>
                 </>
               )}
             </form>

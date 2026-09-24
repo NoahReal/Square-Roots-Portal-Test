@@ -157,6 +157,10 @@ STATIC_URL = 'static/'
 DEFAULT_FROM_EMAIL = 'Square Roots <squareroots@enactussmu.ca>'
 TEAM_EMAIL = 'squareroots@enactussmu.ca'  # where sign-up and contact notifications go
 
+# How long personal details are kept (see the Privacy page and `manage.py forget_old_details`).
+CUSTOMER_DETAILS_KEPT_DAYS = 60   # after a customer's drop
+CONTACT_MESSAGES_KEPT_DAYS = 365  # Contact Us messages
+
 MAILERS = {
     'default': {
         'BACKEND': 'accounts.email_backend.ReadableConsoleBackend',
