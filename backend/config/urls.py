@@ -29,4 +29,6 @@ urlpatterns = [
     path("api/admin/events/", website_views.AdminEventListView.as_view()),
     path("api/admin/events/<int:pk>/", website_views.AdminEventDetailView.as_view()),
     path("api/catalog/", ApiCatalogView.as_view()),
+    path("sitemap.xml", website_views.sitemap),
+    path("robots.txt", website_views.robots),
 ]

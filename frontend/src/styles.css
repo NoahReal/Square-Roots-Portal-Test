@@ -579,3 +579,8 @@
   gap: 10px;
   margin-top: 24px;
 }
+
+.page-loading {
+  padding: 48px var(--gutter);
+  text-align: center;
+}

@@ -1,6 +1,7 @@
 import re
 
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -222,3 +223,35 @@ class AdminSiteTextView(APIView):
     def delete(self, request):
         PageText.objects.filter(key=request.data.get("key") or "").delete()
         return SiteTextView().get(request)
+
+
+# ---------- For search engines ----------
+
+# The public pages worth finding in a search. Keep in step with the routes in frontend/src/App.jsx.
+PUBLIC_PAGES = [
+    "/", "/about", "/drop-dates-locations", "/reserve", "/whats-in-the-bundle", "/for-farms",
+    "/become-a-community-manager", "/events", "/contact-us", "/request-a-location", "/signup", "/privacy",
+]
+
+
+def site_address(request):
+    return f"{request.scheme}://{request.get_host()}"
+
+
+def sitemap(request):
+    """sitemap.xml: the public pages, so search engines find them all."""
+    urls = "".join(f"  <url><loc>{site_address(request)}{path}</loc></url>\n" for path in PUBLIC_PAGES)
+    xml = f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>\n'
+    return HttpResponse(xml, content_type="application/xml")
+
+
+def robots(request):
+    """robots.txt: search engines may read the public site, but not the partner portal or private links."""
+    lines = [
+        "User-agent: *",
+        "Disallow: /portal/",
+        "Disallow: /reserve/manage/",
+        "Disallow: /api/",
+        f"Sitemap: {site_address(request)}/sitemap.xml",
+    ]
+    return HttpResponse("\n".join(lines) + "\n", content_type="text/plain")

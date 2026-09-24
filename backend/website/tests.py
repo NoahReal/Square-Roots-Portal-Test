@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -94,3 +94,13 @@ class SiteTextTests(TestCase):
         manager = APIClient()
         manager.force_authenticate(User.objects.create_user("cm.test", role=User.Role.COMMUNITY_MANAGER))
         self.assertEqual(manager.put("/api/admin/site-text/", {"key": "about.intro", "text": "x"}, format="json").status_code, 403)
+
+
+@override_settings(ALLOWED_HOSTS=["squareroots.example"])
+class SearchEngineTests(TestCase):
+    def test_sitemap_and_robots_use_the_sites_address(self):
+        sitemap = self.client.get("/sitemap.xml", HTTP_HOST="squareroots.example")
+        self.assertContains(sitemap, "<loc>http://squareroots.example/reserve</loc>")
+        robots = self.client.get("/robots.txt", HTTP_HOST="squareroots.example")
+        self.assertContains(robots, "Disallow: /portal/")
+        self.assertContains(robots, "Sitemap: http://squareroots.example/sitemap.xml")

@@ -13,6 +13,9 @@ export default defineConfig({
     // address in the Host header, which Django's CSRF check compares against.
     proxy: {
       '/api': { target: API_URL, changeOrigin: false },
+      // Made by Django, so they list the site's real address.
+      '/sitemap.xml': { target: API_URL, changeOrigin: false },
+      '/robots.txt': { target: API_URL, changeOrigin: false },
     },
   },
 })

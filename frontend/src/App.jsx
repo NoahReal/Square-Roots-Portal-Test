@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
 import ErrorBoundary from './components/ErrorBoundary'
+import { updateSearchTags } from './seo'
 import { ROLES, homeFor } from './roles'
 
 // Public website (same addresses as squarerootssmu.ca)
@@ -21,38 +22,41 @@ import ManageReservationPage from './pages/site/ManageReservationPage'
 import BundlePage from './pages/site/BundlePage'
 import PrivacyPage from './pages/site/PrivacyPage'
 import RequestLocationPage from './pages/site/RequestLocationPage'
-import AreaRequestsPage from './pages/portal/admin/AreaRequestsPage'
-import WebsiteTextPage from './pages/portal/admin/WebsiteTextPage'
-import HostReservePage from './pages/portal/host/HostReservePage'
 
-// Partner portal (everything under /portal)
-import Layout from './components/Layout'
+// Partner portal: signing in is part of the public website...
 import LoginPage from './pages/portal/LoginPage'
 import PendingPage from './pages/portal/PendingPage'
 import ForgotPasswordPage from './pages/portal/ForgotPasswordPage'
 import ResetPasswordPage from './pages/portal/ResetPasswordPage'
-import AccountPage from './pages/portal/AccountPage'
-import ApiPage from './pages/portal/ApiPage'
-import SignupsPage from './pages/portal/SignupsPage'
-import ProducePage from './pages/portal/farm/ProducePage'
-import PickupsPage from './pages/portal/farm/PickupsPage'
-import DropCyclesPage from './pages/portal/admin/DropCyclesPage'
-import OrdersPage from './pages/portal/admin/OrdersPage'
-import FarmsPage from './pages/portal/admin/FarmsPage'
-import ImpactPage from './pages/portal/admin/ImpactPage'
-import OrderPage from './pages/portal/manager/OrderPage'
-import PreordersPage from './pages/portal/manager/PreordersPage'
-import AfterDropPage from './pages/portal/manager/AfterDropPage'
-import HostDropsPage from './pages/portal/host/HostDropsPage'
-import PeoplePage from './pages/portal/admin/PeoplePage'
-import AdminHomePage from './pages/portal/admin/AdminHomePage'
-import ManagerHomePage from './pages/portal/manager/ManagerHomePage'
-import FarmHomePage from './pages/portal/farm/FarmHomePage'
-import AdminLocationsPage from './pages/portal/admin/LocationsPage'
-import AdminEventsPage from './pages/portal/admin/EventsPage'
-import MoneyPage from './pages/portal/admin/MoneyPage'
-import PackingPage from './pages/portal/admin/PackingPage'
-import SettingsPage from './pages/portal/admin/SettingsPage'
+
+// ...and everything behind the login loads only when someone opens the portal,
+// so people visiting the public website download less.
+const AreaRequestsPage = lazy(() => import('./pages/portal/admin/AreaRequestsPage'))
+const WebsiteTextPage = lazy(() => import('./pages/portal/admin/WebsiteTextPage'))
+const HostReservePage = lazy(() => import('./pages/portal/host/HostReservePage'))
+const Layout = lazy(() => import('./components/Layout'))
+const AccountPage = lazy(() => import('./pages/portal/AccountPage'))
+const ApiPage = lazy(() => import('./pages/portal/ApiPage'))
+const SignupsPage = lazy(() => import('./pages/portal/SignupsPage'))
+const ProducePage = lazy(() => import('./pages/portal/farm/ProducePage'))
+const PickupsPage = lazy(() => import('./pages/portal/farm/PickupsPage'))
+const DropCyclesPage = lazy(() => import('./pages/portal/admin/DropCyclesPage'))
+const OrdersPage = lazy(() => import('./pages/portal/admin/OrdersPage'))
+const FarmsPage = lazy(() => import('./pages/portal/admin/FarmsPage'))
+const ImpactPage = lazy(() => import('./pages/portal/admin/ImpactPage'))
+const OrderPage = lazy(() => import('./pages/portal/manager/OrderPage'))
+const PreordersPage = lazy(() => import('./pages/portal/manager/PreordersPage'))
+const AfterDropPage = lazy(() => import('./pages/portal/manager/AfterDropPage'))
+const HostDropsPage = lazy(() => import('./pages/portal/host/HostDropsPage'))
+const PeoplePage = lazy(() => import('./pages/portal/admin/PeoplePage'))
+const AdminHomePage = lazy(() => import('./pages/portal/admin/AdminHomePage'))
+const ManagerHomePage = lazy(() => import('./pages/portal/manager/ManagerHomePage'))
+const FarmHomePage = lazy(() => import('./pages/portal/farm/FarmHomePage'))
+const AdminLocationsPage = lazy(() => import('./pages/portal/admin/LocationsPage'))
+const AdminEventsPage = lazy(() => import('./pages/portal/admin/EventsPage'))
+const MoneyPage = lazy(() => import('./pages/portal/admin/MoneyPage'))
+const PackingPage = lazy(() => import('./pages/portal/admin/PackingPage'))
+const SettingsPage = lazy(() => import('./pages/portal/admin/SettingsPage'))
 
 // Only lets an approved, logged-in user with the right role through.
 function RequireRole({ role }) {
@@ -143,6 +147,7 @@ function PageChange() {
   useEffect(() => {
     window.scrollTo(0, 0)
     document.title = titleFor(pathname)
+    updateSearchTags(pathname, document.title)
   }, [pathname])
   return null
 }
@@ -156,48 +161,50 @@ export default function App() {
     <>
       <PageChange />
       <ErrorBoundary resetKey={pathname}>
-        <Routes>
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/drop-dates-locations" element={<LocationsPage />} />
-            <Route path="/for-farms" element={<ForFarmsPage />} />
-            <Route path="/become-a-community-manager" element={<BecomeCommunityManagerPage />} />
-            <Route path="/events" element={<EventsPage />} />
-            <Route path="/contact-us" element={<ContactPage />} />
-            <Route path="/signup" element={<SignupChooserPage />} />
-            <Route path="/signup/:roleSlug" element={<SignupPage />} />
-            <Route path="/reserve" element={<ReservePage />} />
-            <Route path="/reserve/manage/:token" element={<ManageReservationPage />} />
-            <Route path="/whats-in-the-bundle" element={<BundlePage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/request-a-location" element={<RequestLocationPage />} />
+        <Suspense fallback={<p className="muted page-loading">Loading…</p>}>
+          <Routes>
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/drop-dates-locations" element={<LocationsPage />} />
+              <Route path="/for-farms" element={<ForFarmsPage />} />
+              <Route path="/become-a-community-manager" element={<BecomeCommunityManagerPage />} />
+              <Route path="/events" element={<EventsPage />} />
+              <Route path="/contact-us" element={<ContactPage />} />
+              <Route path="/signup" element={<SignupChooserPage />} />
+              <Route path="/signup/:roleSlug" element={<SignupPage />} />
+              <Route path="/reserve" element={<ReservePage />} />
+              <Route path="/reserve/manage/:token" element={<ManageReservationPage />} />
+              <Route path="/whats-in-the-bundle" element={<BundlePage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/request-a-location" element={<RequestLocationPage />} />
 
-            <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
-            <Route path="/portal/pending" element={<PendingPage />} />
-            <Route path="/portal/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/portal/reset-password" element={<ResetPasswordPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
+              <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
+              <Route path="/portal/pending" element={<PendingPage />} />
+              <Route path="/portal/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/portal/reset-password" element={<ResetPasswordPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
 
-          <Route path="/portal" element={<Navigate to={user ? homeFor(user) : '/portal/login'} replace />} />
+            <Route path="/portal" element={<Navigate to={user ? homeFor(user) : '/portal/login'} replace />} />
 
-          {Object.entries(ROLES).map(([role, config]) => (
-            <Route key={role} element={<RequireRole role={role} />}>
+            {Object.entries(ROLES).map(([role, config]) => (
+              <Route key={role} element={<RequireRole role={role} />}>
+                <Route element={<Layout />}>
+                  {config.nav.map((item) => (
+                    <Route key={item.to} path={item.to} element={pageFor(item)} />
+                  ))}
+                </Route>
+              </Route>
+            ))}
+
+            <Route element={<RequireApproved />}>
               <Route element={<Layout />}>
-                {config.nav.map((item) => (
-                  <Route key={item.to} path={item.to} element={pageFor(item)} />
-                ))}
+                <Route path="/portal/account" element={<AccountPage />} />
               </Route>
             </Route>
-          ))}
-
-          <Route element={<RequireApproved />}>
-            <Route element={<Layout />}>
-              <Route path="/portal/account" element={<AccountPage />} />
-            </Route>
-          </Route>
-        </Routes>
+          </Routes>
+        </Suspense>
       </ErrorBoundary>
     </>
   )
