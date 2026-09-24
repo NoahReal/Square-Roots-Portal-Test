@@ -1,3 +1,5 @@
+import re
+
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -11,7 +13,7 @@ from rest_framework.views import APIView
 
 from accounts.notifications import notify_team
 from accounts.permissions import IsAdminRole
-from .models import ContactMessage, Event
+from .models import AreaRequest, ContactMessage, Event
 
 
 class ContactMessageSerializer(serializers.ModelSerializer):
@@ -102,4 +104,84 @@ class AdminEventDetailView(APIView):
 
     def delete(self, request, pk):
         get_object_or_404(Event, pk=pk).delete()
+        return Response(status=204)
+
+
+# ---------- "Bring Square Roots to my area" ----------
+
+POSTAL_CODE = re.compile(r"^([A-Z]\d[A-Z])\s?(\d[A-Z]\d)?$")
+
+
+class AreaRequestSerializer(serializers.ModelSerializer):
+    area = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = AreaRequest
+        fields = ["id", "email", "postal_code", "area", "town", "note", "could_help", "created_at"]
+        extra_kwargs = {
+            "email": {"error_messages": {"blank": "Add your email, so we can tell you if a location opens.",
+                                         "invalid": "Check your email address, like name@example.com."}},
+            "postal_code": {"error_messages": {"blank": "Add your postal code, like B3H 1G3."}},
+        }
+
+    def validate_postal_code(self, value):
+        match = POSTAL_CODE.match(value.strip().upper())
+        if not match:
+            raise serializers.ValidationError("Check your postal code, like B3H 1G3 (or just the first part, B3H).")
+        return " ".join(part for part in match.groups() if part)
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AreaRequestView(APIView):
+    """Asks for a Square Roots location near you. Public (limited per visitor)."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "contact"
+
+    def post(self, request):
+        serializer = AreaRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        area_request = serializer.save()
+        if area_request.could_help:
+            notify_team(
+                subject=f"Someone near {area_request.area} would like to help start a location",
+                body=f"{area_request.email} ({area_request.postal_code} {area_request.town}) asked for a location "
+                f"and said they could help run or host it.\n\n{area_request.note}",
+            )
+        return Response({"ok": True, "area": area_request.area}, status=201)
+
+
+class AdminAreaRequestView(APIView):
+    """Location requests from the website, grouped by area (the first half of the postal code), busiest first (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        requests = list(AreaRequest.objects.all())
+        areas = {}
+        for item in requests:
+            area = areas.setdefault(item.area, {"area": item.area, "requests": 0, "could_help": 0, "towns": set(), "latest": item.created_at})
+            area["requests"] += 1
+            area["could_help"] += item.could_help
+            if item.town:
+                area["towns"].add(item.town.strip())
+        return Response(
+            {
+                "areas": sorted(
+                    ({**a, "towns": sorted(a["towns"])} for a in areas.values()),
+                    key=lambda a: (-a["requests"], a["area"]),
+                ),
+                "requests": AreaRequestSerializer(requests, many=True).data,
+            }
+        )
+
+
+class AdminAreaRequestDetailView(APIView):
+    """Deletes a location request, for example if the person asks us to (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def delete(self, request, pk):
+        get_object_or_404(AreaRequest, pk=pk).delete()
         return Response(status=204)

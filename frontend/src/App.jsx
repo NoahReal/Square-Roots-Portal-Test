@@ -20,6 +20,8 @@ import ReservePage from './pages/site/ReservePage'
 import ManageReservationPage from './pages/site/ManageReservationPage'
 import BundlePage from './pages/site/BundlePage'
 import PrivacyPage from './pages/site/PrivacyPage'
+import RequestLocationPage from './pages/site/RequestLocationPage'
+import AreaRequestsPage from './pages/portal/admin/AreaRequestsPage'
 import HostReservePage from './pages/portal/host/HostReservePage'
 
 // Partner portal (everything under /portal)
@@ -76,6 +78,7 @@ const PAGES = {
   '/portal/admin/money': MoneyPage,
   '/portal/admin/packing': PackingPage,
   '/portal/admin/settings': SettingsPage,
+  '/portal/admin/area-requests': AreaRequestsPage,
   '/portal/manager/order': OrderPage,
   '/portal/manager/preorders': PreordersPage,
   '/portal/manager/after-drop': AfterDropPage,
@@ -110,6 +113,7 @@ const PUBLIC_TITLES = {
   '/reserve': 'Reserve a Bundle',
   '/whats-in-the-bundle': 'What’s in the Bundle',
   '/privacy': 'Privacy',
+  '/request-a-location': 'Bring Square Roots to Your Area',
   '/signup': 'Partner Sign-up',
   '/portal/login': 'Log in',
   '/portal/pending': 'Application received',
@@ -165,6 +169,7 @@ export default function App() {
             <Route path="/reserve/manage/:token" element={<ManageReservationPage />} />
             <Route path="/whats-in-the-bundle" element={<BundlePage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/request-a-location" element={<RequestLocationPage />} />
 
             <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
             <Route path="/portal/pending" element={<PendingPage />} />

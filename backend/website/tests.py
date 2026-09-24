@@ -56,3 +56,25 @@ class EventTests(TestCase):
         )
         self.assertIn("ends_on", bad.data)
         self.assertEqual(APIClient().post("/api/admin/events/", {}, format="json").status_code, 401)
+
+
+class AreaRequestTests(TestCase):
+    def test_request_a_location_and_the_team_sees_it_grouped_by_area(self):
+        from rest_framework.test import APIClient
+
+        from accounts.models import User
+
+        public = APIClient()
+        response = public.post("/api/area-requests/", {"email": "a@example.com", "postal_code": "b4n2l1", "town": "Kentville"}, format="json")
+        self.assertEqual((response.status_code, response.data["area"]), (201, "B4N"))
+        public.post("/api/area-requests/", {"email": "b@example.com", "postal_code": "B4N", "could_help": True}, format="json")
+        public.post("/api/area-requests/", {"email": "c@example.com", "postal_code": "B0P 1X0"}, format="json")
+        self.assertEqual(public.post("/api/area-requests/", {"email": "d@example.com", "postal_code": "12345"}, format="json").status_code, 400)
+
+        admin = APIClient()
+        admin.force_authenticate(User.objects.create_user("admin.test", role=User.Role.ADMIN))
+        areas = admin.get("/api/admin/area-requests/").data["areas"]
+        self.assertEqual(
+            (areas[0]["area"], areas[0]["requests"], areas[0]["could_help"], areas[0]["towns"]), ("B4N", 2, 1, ["Kentville"])
+        )
+        self.assertIn("would like to help", mail.outbox[-1].subject)

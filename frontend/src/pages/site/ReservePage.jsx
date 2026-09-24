@@ -165,6 +165,9 @@ export default function ReservePage() {
                     ))}
                   </select>
                   <FieldError error={errors.site_drop} />
+                  <p className="reserve-hint">
+                    <Link to="/request-a-location">{t.noneNearby}</Link>
+                  </p>
                 </div>
                 {site && <DropChoice site={site} drop={drop} onChoose={setDropId} bundles={bundles} />}
               </Step>

@@ -33,3 +33,29 @@ class Event(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class AreaRequest(models.Model):
+    """Someone asking for a Square Roots location near them ("Bring Square Roots to my area").
+
+    The team sees where requests cluster, which helps find new Community Managers and host sites.
+    """
+
+    email = models.EmailField()
+    postal_code = models.CharField(max_length=7, help_text="Like B3H 1G3. The first three characters give the area.")
+    town = models.CharField(max_length=100, blank=True)
+    note = models.CharField(max_length=500, blank=True)
+    # Someone who'd consider running or hosting a location themselves.
+    could_help = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.postal_code} ({self.email})"
+
+    @property
+    def area(self):
+        """The first half of the postal code (e.g. "B3H"), which covers a neighbourhood or small town."""
+        return self.postal_code[:3]

@@ -168,6 +168,9 @@ export default function LocationsPage() {
             <Link to="/signup/host-site" className="btn">
               Host a Drop
             </Link>
+            <Link to="/request-a-location" className="btn">
+              Ask for one near you
+            </Link>
           </div>
         </div>
       </section>

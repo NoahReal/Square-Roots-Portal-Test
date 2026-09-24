@@ -22,7 +22,7 @@ from drops.models import (
     new_manage_token,
 )
 from farms.models import Farm, FarmOrder, FarmOrderLine, ProduceListing
-from website.models import ContactMessage, Event
+from website.models import AreaRequest, ContactMessage, Event
 
 DEMO_PASSWORD = "squareroots"
 
@@ -185,6 +185,7 @@ class Command(BaseCommand):
         counts = self.create_drop_history(sites, farms, users)
         self.create_signups(sites)
         self.create_events()
+        self.create_area_requests()
 
         self.stdout.write(self.style.SUCCESS(
             f"Created {len(SITES)} locations, {len(FARMS)} farms, {counts['cycles']} drop cycles "
@@ -206,6 +207,7 @@ class Command(BaseCommand):
         Site.objects.all().delete()
         ContactMessage.objects.all().delete()
         Event.objects.all().delete()
+        AreaRequest.objects.all().delete()
 
     def create_sites(self):
         # Prices from Square Roots: $10 standard, $7.50 at cost, free bundles, $1.99 delivery.
@@ -266,6 +268,18 @@ class Command(BaseCommand):
             if "site" in details:
                 details["site"] = sites[details["site"]]
             Application.objects.create(user=user, **details)
+
+    def create_area_requests(self):
+        """Made-up "bring Square Roots to my area" requests, so the admin screen has something to show."""
+        for postal_code, town, could_help in [
+            ("B4N 2L1", "Kentville", True), ("B4N 1A5", "Kentville", False), ("B4N", "", False),
+            ("B2N 3Z7", "Truro", False), ("B2N 5B1", "Truro", True), ("B4A 3K2", "Bedford", False),
+            ("B2G 2W5", "Antigonish", False),
+        ]:
+            AreaRequest.objects.create(
+                email=f"{(town or 'someone').lower()}.{len(postal_code)}{int(could_help)}@example.com",
+                postal_code=postal_code, town=town, could_help=could_help,
+            )
 
     def create_events(self):
         """The event from squarerootssmu.ca/events. The live page doesn't give a year; 2024 is a guess
