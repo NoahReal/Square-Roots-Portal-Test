@@ -262,7 +262,7 @@ const WORDS = {
     phoneHint: 'si vous préférez ne pas utiliser le courriel',
     everyDrop: (site) => `Réserver pour moi à chaque distribution de ${site}`,
     everyDropHint: 'Nous réserverons pour vous à chaque nouvelle distribution et vous écrirons. Arrêtez quand vous voulez.',
-    rememberMe: 'Retenir mes coordonnées sur cet appareil',
+    rememberMe: 'Mémoriser mes coordonnées sur cet appareil',
     ifSpotOpens: 'Si une place se libère, vous paierez',
     payAtDrop: 'À payer sur place',
     oneMoment: 'Un instant…',
@@ -290,7 +290,7 @@ const WORDS = {
     onWaitlistNotice: 'Vous êtes sur la liste d’attente.',
     allSetNotice: 'C’est fait! Votre panier est réservé.',
     emailedTo: (email) => `Nous avons envoyé les détails à ${email}.`,
-    bookmark: 'Ajoutez cette page à vos favoris : elle sert à modifier ou annuler.',
+    bookmark: 'Ajoutez cette page à vos favoris : elle vous permet de modifier ou d’annuler votre réservation.',
     changesSaved: 'Vos changements sont enregistrés.',
     onWaitlistTitle: 'Vous êtes sur la liste d’attente',
     yourReservation: 'Votre réservation',
@@ -332,7 +332,7 @@ const WORDS = {
     neverMind: 'Annuler les changements',
     leaveWaitlistConfirm: 'Quitter la liste d’attente? Vos coordonnées seront supprimées.',
     cancelEveryDropConfirm:
-      'Annuler la réservation pour cette distribution? Votre panier ira à la prochaine personne en attente. Vous resterez inscrit aux prochaines distributions.',
+      'Annuler la réservation pour cette distribution? Votre panier ira à la prochaine personne en attente. Vos réservations aux prochaines distributions sont maintenues.',
     cancelConfirm:
       'Annuler votre réservation? Votre panier ira à la prochaine personne en attente, et vos coordonnées seront supprimées.',
     yesLeave: 'Oui, quitter la liste',
@@ -361,7 +361,7 @@ const WORDS = {
     seeRecipes: 'Recettes et conseils de conservation',
 
     bundleTitle: 'Dans le panier',
-    bundleLead: 'Des produits déclassés de fermes de la Nouvelle-Écosse : de la bonne nourriture qui n’a pas l’allure des épiceries.',
+    bundleLead: 'Des produits déclassés de fermes de la Nouvelle-Écosse : de la bonne nourriture, même si elle n’a pas l’allure parfaite de l’épicerie.',
     nextBundle: (date) => `Prochain panier : ${date}`,
     lastBundle: (date) => `Dernier panier : ${date}`,
     bundleNotYet: 'Nous afficherons le contenu du prochain panier une fois les commandes aux fermes passées.',

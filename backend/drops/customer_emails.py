@@ -87,27 +87,27 @@ TEXT = {
         "Pour arrêter, utilisez le lien plus bas.",
         "reserved": "Vous avez réservé {bundles} de produits frais de la Nouvelle-Écosse.",
         "to_pay": "À payer sur place : {amount} $",
-        "delivery": "Nous livrerons au {address} avec {partner}.",
+        "delivery": "Nous livrerons votre panier à l'adresse {address}, avec {partner}.",
         "code": "Montrez ce code lors de la cueillette : {code}",
         "change_until": "Besoin de modifier ou d'annuler? C'est possible jusqu'au {cutoff} :\n{link}",
         "see_you": "À bientôt!",
         "waitlist_subject": "Vous êtes sur la liste d'attente",
-        "waitlist": "Tous les paniers réservés à {site} sont pris, alors vous êtes sur la liste d'attente pour {bundles}.",
+        "waitlist": "Tous les paniers prévus à {site} sont déjà réservés, alors vous êtes sur la liste d'attente pour {bundles}.",
         "waitlist_next": "Si une place se libère avant la fin des commandes, nous la réserverons pour vous "
         "et vous écrirons tout de suite.",
         "leave_waitlist": "Pour quitter la liste d'attente : {link}",
         "your_reservation": "Votre réservation : {link}",
         "moved_subject": "Votre distribution Square Roots {site} a changé",
-        "moved": "La distribution de {site} pour laquelle vous avez réservé a une nouvelle date ou heure :\n\n{details}\n\n"
+        "moved": "La distribution de {site} pour laquelle vous avez réservé a changé de date ou d'heure :\n\n{details}\n\n"
         "Votre réservation est maintenue. Si le nouvel horaire ne vous convient pas, vous pouvez l'annuler avec le lien ci-dessous.",
         "cancelled_subject": "Votre distribution Square Roots {site} est annulée",
         "cancelled": "Nous sommes désolés : la distribution de {site} du {date} est annulée, alors votre réservation "
         "l'est aussi. Vous n'aurez rien à payer.\n\nVoyez les prochaines distributions et réservez de nouveau : {reserve_link}",
         "message_subject": "Un message au sujet de votre distribution Square Roots {site}",
         "reminder_subject": "À demain chez Square Roots {site}",
-        "reminder": "Petit rappel : vos {bundles} seront prêts demain.",
+        "reminder": "Petit rappel : votre commande de {bundles} sera prête demain.",
         "feedback_subject": "Comment était votre panier Square Roots?",
-        "feedback": "Merci d'être venu à Square Roots {site}! Comment était votre panier? Un seul clic suffit, "
+        "feedback": "Merci de votre visite à Square Roots {site}! Comment était votre panier? Un seul clic suffit, "
         "et ça aide votre gestionnaire communautaire et les fermes :\n{link}#feedback",
     },
 }
