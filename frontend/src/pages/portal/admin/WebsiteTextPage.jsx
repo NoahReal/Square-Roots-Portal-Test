@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../../api'
-import { SITE_TEXT, useSiteTextChanges } from '../../../siteText'
+import { SITE_TEXT, savedKey, useSiteTextChanges } from '../../../siteText'
 import PageHero from '../../../components/PageHero'
 
 const PAGE_LINKS = {
@@ -12,7 +12,7 @@ const PAGE_LINKS = {
   'Become a Community Manager': '/become-a-community-manager',
 }
 
-// Admin screen: change the main text on the public website without a developer.
+// Admin screen: change the main text on the public website without a developer, in English and French.
 // Every block can go back to its original wording.
 export default function WebsiteTextPage() {
   const [pageName, setPageName] = useState(SITE_TEXT[0].page)
@@ -22,7 +22,7 @@ export default function WebsiteTextPage() {
     <>
       <PageHero
         title="Website Text"
-        lead="Change the words on the public website. Changes show as soon as you save, and every block can go back to the original."
+        lead="Change the words on the public website, in English and French. Changes show as soon as you save, and every block can go back to the original. If you change the English, change the French to match."
       />
       <section className="section">
         <div className="container container-narrow">
@@ -41,7 +41,10 @@ export default function WebsiteTextPage() {
             </p>
           </div>
           {page.blocks.map((block) => (
-            <TextBlock key={block.key} block={block} />
+            <div key={block.key} className="text-block-pair">
+              <TextBlock block={block} lang="en" />
+              <TextBlock block={block} lang="fr" />
+            </div>
           ))}
         </div>
       </section>
@@ -49,20 +52,25 @@ export default function WebsiteTextPage() {
   )
 }
 
-function TextBlock({ block }) {
+const LANGUAGE_NAMES = { en: 'English', fr: 'French' }
+
+// One language of one block. English originals are in `block.text`, French in `block.fr`.
+function TextBlock({ block, lang }) {
   const { changed, setChanged } = useSiteTextChanges()
-  const current = changed[block.key] ?? block.text
+  const key = savedKey(block.key, lang)
+  const original = lang === 'en' ? block.text : block[lang]
+  const current = changed[key] ?? original
   const [value, setValue] = useState(current)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-  const isChanged = block.key in changed
+  const isChanged = key in changed
   const Input = block.long ? 'textarea' : 'input'
 
   async function save(event) {
     event.preventDefault()
     setError('')
     try {
-      setChanged(await api('/admin/site-text/', { method: 'PUT', body: { key: block.key, text: value } }))
+      setChanged(await api('/admin/site-text/', { method: 'PUT', body: { key, text: value } }))
       setSaved(true)
     } catch (err) {
       setError([].concat(err.data?.text ?? err.message).join(' '))
@@ -70,19 +78,20 @@ function TextBlock({ block }) {
   }
 
   async function reset() {
-    setChanged(await api('/admin/site-text/', { method: 'DELETE', body: { key: block.key } }))
-    setValue(block.text)
+    setChanged(await api('/admin/site-text/', { method: 'DELETE', body: { key } }))
+    setValue(original)
     setSaved(false)
   }
 
   return (
     <form className="block block-white text-block" onSubmit={save}>
       <div className="field">
-        <label htmlFor={'text-' + block.key}>
-          {block.label} {isChanged && <span className="tag">Changed</span>}
+        <label htmlFor={'text-' + key}>
+          {block.label} ({LANGUAGE_NAMES[lang]}) {isChanged && <span className="tag">Changed</span>}
         </label>
         <Input
-          id={'text-' + block.key}
+          id={'text-' + key}
+          lang={lang}
           rows={block.long ? 4 : undefined}
           value={value}
           onChange={(e) => {

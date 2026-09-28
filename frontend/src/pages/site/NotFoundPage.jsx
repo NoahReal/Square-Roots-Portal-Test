@@ -1,23 +1,26 @@
 import { Link } from 'react-router-dom'
+import { useLanguage } from '../../i18n'
 
 // Shown for any web address that doesn't exist.
 export default function NotFoundPage() {
+  const { t } = useLanguage()
+  const words = t.notFound
   return (
     <>
       <section className="title-block">
-        <h1>Page not found</h1>
-        <p>We couldn't find that page. It may have moved, or the link may have a typo.</p>
+        <h1>{words.title}</h1>
+        <p>{words.text}</p>
       </section>
       <section className="section">
         <div className="container container-narrow not-found-links">
           <Link to="/" className="btn btn-primary">
-            Go to the home page
+            {words.home}
           </Link>
           <Link to="/drop-dates-locations" className="btn">
-            Find a drop near you
+            {words.findDrop}
           </Link>
           <Link to="/portal/login" className="btn">
-            Partner Portal
+            {words.portal}
           </Link>
         </div>
       </section>

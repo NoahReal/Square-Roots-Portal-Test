@@ -1,11 +1,13 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { BritishFlag, FrenchFlag } from './components/Icons'
+import { SITE_WORDS } from './siteWords'
 
-// Languages for the customer pages (Reserve, your reservation, what's in the bundle).
-// The rest of the website is English, like squarerootssmu.ca.
+// Languages for the public website. The partner portal (after logging in) is English only.
+// Words for reserving are below; words for the rest of the website are in siteWords.js.
 //
-// To change wording, edit WORDS below. To add a language: add a copy of the `en` block under its
-// code (e.g. `ar`), add it to LANGUAGES, and add it to Language in backend/drops/models.py and
-// backend/drops/customer_emails.py so emails match.
+// To change wording, edit WORDS below or siteWords.js. To add a language: add a copy of the `en`
+// blocks under its code (e.g. `ar`) here and in siteWords.js and siteText.jsx, add it to LANGUAGES,
+// and add it to Language in backend/drops/models.py and backend/drops/customer_emails.py so emails match.
 // The French was written for this prototype; have a French speaker check it before real use.
 
 export const LANGUAGES = [
@@ -382,6 +384,14 @@ const WORDS = {
   },
 }
 
+// Add the rest of the website's words (siteWords.js), so pages use t.nav.about and so on.
+for (const lang of Object.keys(WORDS)) Object.assign(WORDS[lang], SITE_WORDS[lang])
+
+// The words in one language, for code that can't use useLanguage(), like the crash screen.
+export function wordsFor(lang) {
+  return WORDS[lang] ?? WORDS.en
+}
+
 const LanguageContext = createContext(null)
 
 function savedLanguage() {
@@ -457,29 +467,48 @@ function formatters(lang, t) {
   }
 }
 
-// "English | Français" switch for the customer pages.
+// "Language / Langue: English | Français", for pages where the choice matters most (reserving).
 export function LanguageSwitch() {
-  const { lang, setLang } = useLanguage()
-  useEffect(() => {
-    document.documentElement.lang = lang
-    return () => {
-      document.documentElement.lang = 'en'
-    }
-  }, [lang])
   return (
-    <div className="language-switch" role="group" aria-label="Language / Langue">
+    <div className="language-switch">
+      <span className="language-switch-label" aria-hidden="true">
+        Language / Langue
+      </span>
+      <LanguageButtons />
+    </div>
+  )
+}
+
+const FLAGS = { en: BritishFlag, fr: FrenchFlag }
+
+// The English / Français buttons. `short` shows a flag and "EN | FR" (for the header).
+export function LanguageButtons({ short = false }) {
+  const { lang, setLang } = useLanguage()
+  return (
+    <div className="language-buttons" role="group" aria-label="Language / Langue">
       {LANGUAGES.map((language) => (
         <button
           key={language.code}
           type="button"
           lang={language.code}
+          aria-label={short ? language.name : undefined}
           aria-pressed={lang === language.code}
           className={lang === language.code ? 'on' : ''}
           onClick={() => setLang(language.code)}
         >
-          {language.name}
+          {short ? <ShortName code={language.code} /> : language.name}
         </button>
       ))}
     </div>
+  )
+}
+
+function ShortName({ code }) {
+  const Flag = FLAGS[code]
+  return (
+    <>
+      <Flag />
+      <span className="language-code">{code.toUpperCase()}</span>
+    </>
   )
 }

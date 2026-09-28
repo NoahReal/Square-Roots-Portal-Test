@@ -1,23 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api'
-import { longDate, money, timeRange } from '../../format'
+import { useLanguage } from '../../i18n'
 import { usePricing } from '../../pricing'
 import { FacebookIcon, InstagramIcon } from '../../components/Icons'
 import { useSiteText } from '../../siteText'
 
 // Drop dates come from the drop cycles in the portal, grouped by month like the
-// live site shows them: "Oct 10 & 24".
-function groupByMonth(isoDates) {
+// live site shows them: "Oct 10 & 24" (in French, "10 et 24 oct.").
+function groupByMonth(isoDates, lang, and) {
+  const locale = lang === 'fr' ? 'fr-CA' : 'en-CA'
   const months = new Map()
   for (const iso of isoDates) {
     const [year, month, day] = iso.split('-').map(Number)
-    const name = new Date(year, month - 1, 1).toLocaleDateString('en-CA', { month: 'short' })
+    const name = new Date(year, month - 1, 1).toLocaleDateString(locale, { month: 'short' })
     months.set(name, [...(months.get(name) ?? []), day])
   }
   // "Oct 10 & 24", or "Jan 3, 17 & 31" when a month has three drops
-  const joinDays = (days) => (days.length > 1 ? `${days.slice(0, -1).join(', ')} & ${days.at(-1)}` : `${days[0]}`)
-  return [...months].map(([name, days]) => `${name} ${joinDays(days)}`)
+  const joinDays = (days) => (days.length > 1 ? `${days.slice(0, -1).join(', ')} ${and} ${days.at(-1)}` : `${days[0]}`)
+  return [...months].map(([name, days]) => (lang === 'fr' ? `${joinDays(days)} ${name}` : `${name} ${joinDays(days)}`))
 }
 
 function directionsUrl(site) {
@@ -26,6 +27,8 @@ function directionsUrl(site) {
 
 export default function LocationsPage() {
   const text = useSiteText()
+  const { lang, t, format } = useLanguage()
+  const words = t.locationsPage
   const [sites, setSites] = useState(null)
   const [dropDates, setDropDates] = useState(null)
 
@@ -42,17 +45,17 @@ export default function LocationsPage() {
       <section className="locations-hero" style={{ backgroundImage: 'url(/photos/field-rows.jpg)' }}>
         <div className="locations-card">
           <div>
-            <h1>Locations</h1>
+            <h1>{words.title}</h1>
             <p>{text('locations.intro')}</p>
             <Link to="/become-a-community-manager" className="btn btn-small">
-              Become a Community Manager
+              {words.becomeCm}
             </Link>
           </div>
           <div className="drop-dates">
-            <h2>{dropDates?.year ?? new Date().getFullYear()} Drop Dates</h2>
-            {dropDates?.next && <p className="next-drop-date">Next drop: {longDate(dropDates.next)}</p>}
+            <h2>{words.dropDates(dropDates?.year ?? new Date().getFullYear())}</h2>
+            {dropDates?.next && <p className="next-drop-date">{words.nextDrop(format.longDate(dropDates.next))}</p>}
             <ul>
-              {groupByMonth(dropDates?.dates ?? []).map((line) => (
+              {groupByMonth(dropDates?.dates ?? [], lang, words.and).map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
@@ -63,30 +66,31 @@ export default function LocationsPage() {
       {pricing && (
         <section className="pricing-band">
           <div className="container pricing-inner">
-            <h2>Pay what works for you</h2>
-            <p>Every bundle is 10 lbs of fresh local produce.</p>
+            <h2>{words.payWhatWorks}</h2>
+            <p>{words.bundleSize}</p>
             <ul className="price-list">
               <li>
-                <strong>{money(pricing.standard_price)}</strong>
-                <span>Pay it forward: helps cover bundles for neighbours who need them</span>
+                <strong>{format.money(pricing.standard_price)}</strong>
+                <span>{words.payItForward}</span>
               </li>
               <li>
-                <strong>{money(pricing.at_cost_price)}</strong>
-                <span>At cost, if money is tight</span>
+                <strong>{format.money(pricing.at_cost_price)}</strong>
+                <span>{words.atCost}</span>
               </li>
               <li>
-                <strong>Free</strong>
-                <span>If money is too tight right now</span>
+                <strong>{words.free}</strong>
+                <span>{words.freeText}</span>
               </li>
             </ul>
             <Link to="/reserve" className="btn btn-primary">
-              Reserve a bundle
+              {words.reserve}
             </Link>
             {pricing.delivery.length > 0 && (
               <p className="delivery-note">
-                Home delivery is available{' '}
-                {pricing.delivery.map((d) => `in ${d.site} with ${d.partner}`).join(', ')} for{' '}
-                {money(pricing.delivery_fee)}.
+                {words.delivery(
+                  pricing.delivery.map((d) => words.deliveryPlace(d.site, d.partner)).join(', '),
+                  format.money(pricing.delivery_fee),
+                )}
               </p>
             )}
           </div>
@@ -95,8 +99,8 @@ export default function LocationsPage() {
 
       <section className="find-location">
         <div className="container">
-          <h2>Find a Location</h2>
-          {!sites && <p>Loading locations…</p>}
+          <h2>{words.findLocation}</h2>
+          {!sites && <p>{words.loading}</p>}
           <ul className="location-list">
             {sites?.map((site) => (
               <li key={site.id}>
@@ -104,30 +108,30 @@ export default function LocationsPage() {
                 <p>{site.address}</p>
                 {site.next_drop ? (
                   <p className="location-next">
-                    <strong>Next drop:</strong> {longDate(site.next_drop.drop_date)},{' '}
-                    {timeRange(site.next_drop.starts_at, site.next_drop.ends_at)}
+                    <strong>{words.nextDropLabel}</strong> {format.longDate(site.next_drop.drop_date)},{' '}
+                    {format.timeRange(site.next_drop.starts_at, site.next_drop.ends_at)}
                   </p>
                 ) : (
-                  <p className="location-next muted">Next drop date coming soon</p>
+                  <p className="location-next muted">{words.comingSoon}</p>
                 )}
                 {site.online_reservations && site.next_drop && (
                   <Link to={`/reserve?site=${site.id}`} className="btn btn-primary btn-small location-reserve">
-                    Reserve at {site.name}
+                    {words.reserveAt(site.name)}
                   </Link>
                 )}
                 <div className="location-links">
                   {site.instagram_url && (
-                    <a href={site.instagram_url} target="_blank" rel="noreferrer" aria-label={`${site.name} on Instagram`}>
+                    <a href={site.instagram_url} target="_blank" rel="noreferrer" aria-label={words.onInstagram(site.name)}>
                       <InstagramIcon />
                     </a>
                   )}
                   {site.facebook_url && (
-                    <a href={site.facebook_url} target="_blank" rel="noreferrer" aria-label={`${site.name} on Facebook`}>
+                    <a href={site.facebook_url} target="_blank" rel="noreferrer" aria-label={words.onFacebook(site.name)}>
                       <FacebookIcon />
                     </a>
                   )}
                   <a href={directionsUrl(site)} target="_blank" rel="noreferrer">
-                    Directions
+                    {words.directions}
                   </a>
                 </div>
               </li>
@@ -139,7 +143,7 @@ export default function LocationsPage() {
       {highlights.length > 0 && (
         <>
           <div className="highlights-heading container">
-            <h2>Location Highlights</h2>
+            <h2>{words.highlights}</h2>
           </div>
           <section className="highlights" style={{ backgroundImage: 'url(/photos/brussels-sprouts.jpg)' }}>
             <div className="container">
@@ -157,21 +161,18 @@ export default function LocationsPage() {
       <section className="host-cta">
         <div className="container host-cta-inner">
           <div>
-            <h2>Don’t see a location near you?</h2>
-            <p>
-              Start one as a Community Manager, or offer a space in your community where drops can happen. We'll help
-              with the rest.
-            </p>
+            <h2>{words.noneNearTitle}</h2>
+            <p>{words.noneNearText}</p>
           </div>
           <div className="host-cta-actions">
             <Link to="/signup/community-manager" className="btn btn-primary">
-              Start a location
+              {words.startLocation}
             </Link>
             <Link to="/signup/host-site" className="btn">
-              Host a Drop
+              {words.hostDrop}
             </Link>
             <Link to="/request-a-location" className="btn">
-              Ask for one near you
+              {words.askForOne}
             </Link>
           </div>
         </div>

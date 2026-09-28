@@ -46,6 +46,38 @@
   width: 76px;
 }
 
+/* Language switch: on phones it sits on the left, opposite the menu button */
+.header-language {
+  position: absolute;
+  left: var(--gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sr-green-dark);
+}
+
+.header-language .language-buttons button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+/* A thin outline so the white in the flags shows against the white button */
+.flag {
+  display: block;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+/* Smaller phones: just the flags, so the switch doesn't crowd the logo */
+@media (max-width: 419px) {
+  .header-language .language-code {
+    display: none;
+  }
+}
+
 .menu-toggle {
   position: absolute;
   right: var(--gutter);
@@ -1013,6 +1045,14 @@
     display: none;
   }
 
+  /* After the menu on wide screens */
+  .header-language {
+    position: static;
+    transform: none;
+    order: 3;
+    margin: 0 15px 0 16px;
+  }
+
   /* Desktop menu: serif links with thin vertical dividers, like the live site */
   .public-nav,
   .public-nav.open {
@@ -1707,24 +1747,44 @@
 /* Language switch on the customer pages */
 
 .language-switch {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
   margin-top: 16px;
-  border: 1px solid var(--sr-ink);
 }
 
-.language-switch button {
-  min-height: 40px;
-  padding: 0 14px;
+.language-switch-label {
+  font-weight: 700;
+}
+
+/* The English / Français buttons, here and in the header */
+.language-buttons {
+  display: inline-flex;
+  border: 2px solid var(--sr-green-dark);
+  background: var(--sr-white);
+}
+
+.language-buttons button {
+  min-height: var(--tap);
+  min-width: 44px;
+  padding: 0 16px;
   border: 0;
   background: transparent;
+  color: var(--sr-green-dark);
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
-.language-switch button.on {
-  background: var(--sr-ink);
-  color: var(--sr-white);
+.language-buttons button:hover {
+  background: var(--sr-cream);
+}
+
+.language-buttons button.on {
+  background: var(--sr-green-dark);
+  color: var(--sr-cream);
 }
 
 .reserve-container > .language-switch {

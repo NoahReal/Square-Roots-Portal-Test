@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api'
-import { longDate } from '../../format'
+import { useLanguage } from '../../i18n'
 import PartnerPortalBand from '../../components/PartnerPortalBand'
 import { FacebookIcon, InstagramIcon } from '../../components/Icons'
 
-// Public Events page. The Square Roots team adds events in the portal (Admin → Events).
+// Public Events page. The Square Roots team adds events in the portal (Admin → Events),
+// so an event's own title and description show as the team wrote them.
 export default function EventsPage() {
+  const { t } = useLanguage()
+  const words = t.events
   const [events, setEvents] = useState(null)
 
   useEffect(() => {
@@ -18,19 +21,19 @@ export default function EventsPage() {
   return (
     <>
       <section className="title-block title-block-compact">
-        <h1>Events</h1>
+        <h1>{words.title}</h1>
       </section>
 
       <section className="events">
         <div className="container container-narrow">
-          {!events && <p className="muted center">Loading…</p>}
+          {!events && <p className="muted center">{t.common.loading}</p>}
 
           {events && events.upcoming.length === 0 && (
             <div className="event event-empty">
-              <h2>No upcoming events right now</h2>
+              <h2>{words.noneTitle}</h2>
               <p>
-                Follow us for giveaways, markets and pop-ups. Regular drops happen every two weeks at our{' '}
-                <Link to="/drop-dates-locations">locations</Link>.
+                {words.noneText}
+                <Link to="/drop-dates-locations">{words.locations}</Link>.
               </p>
               <div className="contact-social event-social">
                 <a href="https://www.instagram.com/squarerootssmu/" target="_blank" rel="noreferrer" aria-label="Instagram">
@@ -48,7 +51,7 @@ export default function EventsPage() {
 
           {events?.past.length > 0 && (
             <>
-              <h2 className="past-events-heading">Past events</h2>
+              <h2 className="past-events-heading">{words.past}</h2>
               {events.past.map((event) => (
                 <Event key={event.id} event={event} past />
               ))}
@@ -57,22 +60,20 @@ export default function EventsPage() {
         </div>
       </section>
 
-      <PartnerPortalBand
-        title="Want to host an event with us?"
-        text="Community centres, schools and organizations can host a Square Roots drop. Sign up and we'll get in touch."
-      />
+      <PartnerPortalBand title={words.hostTitle} text={words.hostText} />
     </>
   )
 }
 
 function Event({ event, past }) {
+  const { t, format } = useLanguage()
   const multiDay = event.ends_on && event.ends_on !== event.starts_on
   const year = event.starts_on.slice(0, 4)
   return (
     <article className={'event' + (past ? ' event-past' : '')}>
       <p className="event-when">
-        {longDate(event.starts_on)}
-        {multiDay && ` to ${longDate(event.ends_on)}`}
+        {format.longDate(event.starts_on)}
+        {multiDay && ` ${t.events.to} ${format.longDate(event.ends_on)}`}
         {past && `, ${year}`}
         {event.time_text && ` · ${event.time_text}`}
       </p>

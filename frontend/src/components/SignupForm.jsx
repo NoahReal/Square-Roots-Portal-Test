@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
+import { useLanguage } from '../i18n'
 import { SIGNUP_ROLES } from '../signupRoles'
 
 const NEW_LOCATION = 'new'
@@ -9,7 +10,9 @@ const NEW_LOCATION = 'new'
 // Sign-up form for a Community Manager, Farm or Host Site.
 // `roleSlug` is one of the keys in signupRoles.js, e.g. "farm".
 export default function SignupForm({ roleSlug }) {
-  const { role, button } = SIGNUP_ROLES[roleSlug]
+  const { role } = SIGNUP_ROLES[roleSlug]
+  const { t } = useLanguage()
+  const words = t.signup
   const { signup } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({})
@@ -31,7 +34,7 @@ export default function SignupForm({ roleSlug }) {
     // Point out every empty required box at once, before asking the server.
     const missing = {}
     for (const input of event.target.querySelectorAll('[required]')) {
-      if (!input.value.trim()) missing[input.id.replace('signup-', '')] = 'Please fill this in.'
+      if (!input.value.trim()) missing[input.id.replace('signup-', '')] = t.common.pleaseFill
     }
     if (Object.keys(missing).length > 0) {
       setErrors(missing)
@@ -57,30 +60,35 @@ export default function SignupForm({ roleSlug }) {
     <form className="signup-form" onSubmit={handleSubmit} noValidate>
       {Object.keys(errors).length > 0 && (
         <div className="notice notice-error" role="alert">
-          {errors.detail || 'Please fix the highlighted boxes below.'}
+          {errors.detail || words.fixBoxes}
         </div>
       )}
 
       <div className="field-row">
-        <Field label="First name" required autoComplete="given-name" {...field('first_name')} />
-        <Field label="Last name" required autoComplete="family-name" {...field('last_name')} />
+        <Field label={words.firstName} required autoComplete="given-name" {...field('first_name')} />
+        <Field label={words.lastName} required autoComplete="family-name" {...field('last_name')} />
       </div>
-      <Field label="Email" type="email" required autoComplete="email" {...field('email')} />
-      <Field label="Phone" type="tel" required={role !== 'farm'} autoComplete="tel" {...field('phone')} />
+      <Field label={words.email} type="email" required autoComplete="email" {...field('email')} />
+      <Field label={words.phone} type="tel" required={role !== 'farm'} autoComplete="tel" {...field('phone')} />
 
       {role === 'community_manager' && (
         <>
-          <SelectField label="Where would you like to run drops?" required {...field('site')}>
-            <option value="">Choose a location…</option>
+          <SelectField label={words.whereRun} required {...field('site')}>
+            <option value="">{words.chooseLocation}</option>
             {sites.map((site) => (
               <option key={site.id} value={site.id}>
                 {site.name}
               </option>
             ))}
-            <option value={NEW_LOCATION}>Somewhere new</option>
+            <option value={NEW_LOCATION}>{words.somewhereNew}</option>
           </SelectField>
           {form.site === NEW_LOCATION && (
-            <Field label="Planned location" hint="Town or neighbourhood" required {...field('planned_location')} />
+            <Field
+              label={words.plannedLocation}
+              hint={words.townOrNeighbourhood}
+              required
+              {...field('planned_location')}
+            />
           )}
           {errors.planned_location && form.site !== NEW_LOCATION && <FieldError error={errors.planned_location} />}
         </>
@@ -88,53 +96,51 @@ export default function SignupForm({ roleSlug }) {
 
       {role === 'farm' && (
         <>
-          <Field label="Farm name" required {...field('organization')} />
-          <Field label="Where is your farm?" hint="Town or county" {...field('address')} />
-          <Field label="What types of produce do you sell?" required multiline {...field('produce_types')} />
-          <Field
-            label="How many pounds do you have available on a bi-weekly basis?"
-            required
-            {...field('pounds_available')}
-          />
+          <Field label={words.farmName} required {...field('organization')} />
+          <Field label={words.whereFarm} hint={words.townOrCounty} {...field('address')} />
+          <Field label={words.produceTypes} required multiline {...field('produce_types')} />
+          <Field label={words.pounds} required {...field('pounds_available')} />
         </>
       )}
 
       {role === 'host_site' && (
         <>
-          <Field label="Name of your organization or space" required {...field('organization')} />
-          <Field label="Address of your space" required autoComplete="street-address" {...field('address')} />
-          <SelectField label="Do you already host a Square Roots location?" {...field('site')}>
-            <option value="">No, this would be a new location</option>
+          <Field label={words.orgName} required {...field('organization')} />
+          <Field label={words.spaceAddress} required autoComplete="street-address" {...field('address')} />
+          <SelectField label={words.alreadyHost} {...field('site')}>
+            <option value="">{words.newLocation}</option>
             {sites.map((site) => (
               <option key={site.id} value={site.id}>
-                Yes: {site.name}
+                {words.yesSite(site.name)}
               </option>
             ))}
           </SelectField>
         </>
       )}
 
-      <Field label="Message" hint="Optional" multiline {...field('message')} />
+      <Field label={words.message} hint={words.optional} multiline {...field('message')} />
 
       <fieldset className="account-fields">
-        <legend>Your partner portal login</legend>
-        <Field label="Username" required autoComplete="username" autoCapitalize="none" {...field('username')} />
+        <legend>{words.loginLegend}</legend>
+        <Field label={words.username} required autoComplete="username" autoCapitalize="none" {...field('username')} />
         <Field
-          label="Password"
+          label={words.password}
           type="password"
           required
-          hint="At least 8 characters, and not just numbers"
+          hint={words.passwordHint}
           autoComplete="new-password"
           {...field('password')}
         />
       </fieldset>
 
       <button className="btn btn-primary btn-block" disabled={busy}>
-        {busy ? 'Sending…' : button}
+        {busy ? t.common.sending : words.roles[roleSlug].button}
       </button>
       <p className="form-footnote">
-        We'll review your application and email you when your account is approved. Already have an account?{' '}
-        <Link to="/portal/login">Log in</Link>. How we use your details: <Link to="/privacy">Privacy</Link>
+        {words.review}
+        <Link to="/portal/login">{t.common.logIn}</Link>
+        {words.howWeUse}
+        <Link to="/privacy">{t.common.privacy}</Link>
       </p>
     </form>
   )

@@ -793,3 +793,12 @@
 .text-block .field {
   margin-bottom: 12px;
 }
+
+/* Each block's English and French boxes sit together, with space before the next block */
+.text-block-pair {
+  margin-bottom: 32px;
+}
+
+.text-block-pair .text-block {
+  margin-bottom: 8px;
+}

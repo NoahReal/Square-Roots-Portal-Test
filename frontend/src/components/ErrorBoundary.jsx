@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { wordsFor } from '../i18n'
 
 // If a page crashes, show a friendly screen instead of a blank page.
 // Going to another page (a new `resetKey`) clears the error.
@@ -20,20 +21,23 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (!this.state.error) return this.props.children
+    // In the language the page was showing (the portal is always English)
+    const words = wordsFor(document.documentElement.lang)
+    const t = words.crash
     return (
       <main className="crash-page">
         <a href="/" className="crash-logo">
-          <img src="/square-roots-logo.png" alt="Square Roots home" />
+          <img src="/square-roots-logo.png" alt={words.nav.logoAlt} />
         </a>
-        <h1>Something went wrong</h1>
-        <p>Sorry, this page didn’t load properly.</p>
-        <p>Try loading the page again. If it keeps happening, please let us know at squareroots@enactussmu.ca.</p>
+        <h1>{t.title}</h1>
+        <p>{t.sorry}</p>
+        <p>{t.tryAgain}</p>
         <div className="crash-buttons">
           <button className="btn btn-primary" onClick={() => window.location.reload()}>
-            Load the page again
+            {t.reload}
           </button>
           <a href="/" className="btn">
-            Go to the home page
+            {t.home}
           </a>
         </div>
       </main>
