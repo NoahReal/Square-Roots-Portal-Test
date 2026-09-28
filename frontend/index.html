@@ -22,8 +22,119 @@
     <meta property="og:description" content="Fresh Nova Scotia seconds produce, pay what works for you. Reserve a bundle online." />
     <meta property="og:image" content="/photos/brussels-sprouts.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preload" as="image" href="/square-roots-logo.png" />
+    <!-- Loading animation, shown on every visit or refresh until the site is ready (src/splash.js
+         hides it). It's here, not in a .css file, so it shows before the rest of the site loads.
+         A cream disc pops up on a deep green background, then the logo builds itself inside it.
+         The logo is stacked three times, each copy cut to one part of it:
+           1. the banner unrolls,  2. the roots grow down,  3. the veggies sprout up from behind the banner.
+         The percentages are where those parts sit in square-roots-logo.png (440 x 394).
+         Colours are copied from theme.css, which hasn't loaded yet. -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: grid;
+        place-items: center;
+        /* --sr-green-dark in the middle, fading to --sr-soil at the edges */
+        background: radial-gradient(circle at 50% 45%, #417150 0%, #2B4A34 45%, #20271E 100%);
+        transition: opacity 0.5s ease 0.15s, visibility 0.5s 0.15s;
+        /* Safety net: if the site never finishes loading, don't hide the page behind the logo forever */
+        animation: splash-give-up 0s 8s forwards;
+      }
+      #splash.splash-done { opacity: 0; visibility: hidden; }
+
+      /* The cream disc the logo sits on */
+      .splash-badge {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: min(260px, 64vw);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: #F7F7F1;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4), inset 0 -8px 24px rgba(65, 113, 80, 0.12);
+        transform: scale(0);
+        animation: splash-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+      #splash.splash-done .splash-badge { animation: splash-lift 0.45s ease-in forwards; }
+
+      /* Thin yellow (--sr-yellow) ring that circles the disc while we wait */
+      .splash-ring {
+        position: absolute;
+        inset: -14px;
+        width: calc(100% + 28px);
+        height: calc(100% + 28px);
+        fill: none;
+        stroke-width: 1.2;
+        stroke-linecap: round;
+        opacity: 0;
+        animation: splash-fade-in 0.4s ease 1.3s forwards, splash-spin 1.4s linear infinite;
+      }
+      .splash-ring .track { stroke: rgba(247, 247, 241, 0.15); }
+      .splash-ring .arc { stroke: #FBB530; stroke-dasharray: 60 242; }
+
+      .splash-logo { position: relative; width: 74%; aspect-ratio: 440 / 394; margin-top: -4%; }
+      .splash-logo img,
+      .splash-veg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+      /* 1. Banner ("SQUARE ROOTS"): unrolls from the middle outward */
+      .splash-banner {
+        z-index: 2;
+        clip-path: inset(40.5% 50% 35% 50%);
+        transform: scale(0.94);
+        animation: splash-unroll 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+      }
+      /* 2. Triangle and roots: grow down from the banner, with a soft edge */
+      .splash-roots {
+        clip-path: inset(63% 0 0 0);
+        -webkit-mask: linear-gradient(#000 40%, transparent 45%) 0 100% / 100% 300% no-repeat;
+        mask: linear-gradient(#000 40%, transparent 45%) 0 100% / 100% 300% no-repeat;
+        animation: splash-grow 0.8s ease-out 0.6s forwards;
+      }
+      /* 3. Carrots, beet and tree: sprout up from behind the banner, then bob gently while waiting */
+      .splash-veg { z-index: 1; clip-path: inset(0 0 57% 0); }
+      .splash-veg img {
+        transform: translateY(45%);
+        animation:
+          splash-sprout 0.6s cubic-bezier(0.34, 1.5, 0.64, 1) 0.9s forwards,
+          splash-bob 1.6s ease-in-out 1.5s infinite;
+      }
+
+      @keyframes splash-pop { to { transform: scale(1); } }
+      @keyframes splash-lift { from { transform: scale(1); } to { transform: scale(1.1); opacity: 0; } }
+      @keyframes splash-unroll { to { clip-path: inset(40.5% 0 35% 0); transform: scale(1); } }
+      @keyframes splash-grow { to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+      @keyframes splash-sprout { to { transform: translateY(0); } }
+      @keyframes splash-bob { 50% { transform: translateY(-2.5%); } }
+      @keyframes splash-spin { to { transform: rotate(360deg); } }
+      @keyframes splash-fade-in { to { opacity: 1; } }
+      @keyframes splash-give-up { to { opacity: 0; visibility: hidden; } }
+
+      /* People who ask for less motion just see the logo on its disc */
+      @media (prefers-reduced-motion: reduce) {
+        .splash-badge,
+        .splash-logo img,
+        .splash-veg img { animation: none; clip-path: none; transform: none; -webkit-mask: none; mask: none; }
+        .splash-ring { display: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true">
+      <div class="splash-badge">
+        <svg class="splash-ring" viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="48" />
+          <circle class="arc" cx="50" cy="50" r="48" />
+        </svg>
+        <div class="splash-logo">
+          <img class="splash-roots" src="/square-roots-logo.png" alt="" />
+          <div class="splash-veg"><img src="/square-roots-logo.png" alt="" /></div>
+          <img class="splash-banner" src="/square-roots-logo.png" alt="" />
+        </div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

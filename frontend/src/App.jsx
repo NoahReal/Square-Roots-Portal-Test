@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
 import ErrorBoundary from './components/ErrorBoundary'
 import { updateSearchTags } from './seo'
+import { hideSplash } from './splash'
 import { ROLES, homeFor } from './roles'
 
 // Public website (same addresses as squarerootssmu.ca)
@@ -160,6 +161,10 @@ function PageChange() {
 export default function App() {
   const { user, checking } = useAuth()
   const { pathname } = useLocation()
+  // The logo animation (index.html) covers the page until we know who's signed in
+  useEffect(() => {
+    if (!checking) hideSplash()
+  }, [checking])
   if (checking) return null
 
   return (
