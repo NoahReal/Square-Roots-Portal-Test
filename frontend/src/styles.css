@@ -103,7 +103,10 @@
 }
 
 .user-menu-name {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--tap);
   text-align: right;
   line-height: 1.2;
   text-decoration: none;

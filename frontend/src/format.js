@@ -36,7 +36,7 @@ export function dateAndTime(isoDateTime) {
   const moment = new Date(isoDateTime)
   const day = moment.toLocaleDateString('en-CA', { timeZone: TIME_ZONE, weekday: 'long', month: 'long', day: 'numeric' })
   const time = moment.toLocaleTimeString('en-CA', { timeZone: TIME_ZONE, hour: 'numeric', minute: '2-digit' })
-  return `${day} · ${time}`
+  return `${day} · ${keepTogether(time)}`
 }
 
 // "Tuesday, October 6 at 5:00 p.m." for use inside a sentence (Halifax time)
@@ -60,7 +60,12 @@ function clockTime(hhmm) {
   const [hour, minute] = hhmm.split(':').map(Number)
   const suffix = hour < 12 ? 'a.m.' : 'p.m.'
   const twelveHour = hour % 12 === 0 ? 12 : hour % 12
-  return minute ? `${twelveHour}:${String(minute).padStart(2, '0')} ${suffix}` : `${twelveHour} ${suffix}`
+  return keepTogether(minute ? `${twelveHour}:${String(minute).padStart(2, '0')} ${suffix}` : `${twelveHour} ${suffix}`)
+}
+
+// Non-breaking spaces, so "5:00 p.m." never wraps onto two lines on a phone
+function keepTogether(time) {
+  return time.replace(/\s/g, '\u00a0')
 }
 
 // How long until a deadline, in plain words: "3 days left", "5 hours left", "closed"
