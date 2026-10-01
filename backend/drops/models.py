@@ -49,6 +49,60 @@ class OperatingSettings(models.Model):
         return self.standard_price - self.at_cost_price
 
 
+WEEKDAYS = [(0, "Monday"), (1, "Tuesday"), (2, "Wednesday"), (3, "Thursday"), (4, "Friday"), (5, "Saturday"), (6, "Sunday")]
+
+
+class Route(models.Model):
+    """A delivery route: the locations one set of trucks serves, with its own weekly rhythm.
+
+    Square Roots runs three: Cape Breton (trucks on Wednesday), and Halifax and Halifax North
+    (trucks on Friday). Each route gets its own order form, sent out on its own day.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, blank=True, help_text="e.g. North of Halifax and Truro")
+    form_sent_on = models.PositiveSmallIntegerField(choices=WEEKDAYS, help_text="When the order form goes out.")
+    orders_due_on = models.PositiveSmallIntegerField(choices=WEEKDAYS, help_text="When locations' orders are due.")
+    trucks_on = models.PositiveSmallIntegerField(choices=WEEKDAYS, help_text="When the trucks deliver.")
+    suppliers = models.ManyToManyField("farms.Farm", blank=True, related_name="routes", help_text="Who this route buys from.")
+    # Halifax and Halifax North get the same form; this route copies its form from that one.
+    shares_form_with = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, help_text="Uses the same order form as this route."
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class DropOffPoint(models.Model):
+    """Where a truck drops produce on a route. Usually a location's own market; a hub (like Fairview)
+    takes deliveries for several locations and sorts them, and is paid a share for it."""
+
+    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="drop_off_points")
+    name = models.CharField(max_length=100)
+    # The location that runs the drop-off point, if it's a hub run by a location.
+    hub_site = models.ForeignKey("Site", null=True, blank=True, on_delete=models.SET_NULL, related_name="hubs_run")
+    hub_share_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal("0"),
+        help_text="What the hub gets for sorting, as a percent of what's bought from the supplier below (e.g. 10).",
+    )
+    hub_share_supplier = models.ForeignKey(
+        "farms.Farm", null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+        help_text="Whose orders the hub's share is worked out from (e.g. Ketty Brow's).",
+    )
+    notes = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["route__sort_order", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.route})"
+
+
 class Site(models.Model):
     """A Square Roots location, where a Community Manager runs drops (e.g. "Lower Sackville")."""
 
@@ -75,6 +129,9 @@ class Site(models.Model):
     )
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
+    # Which route's trucks serve this location, and where they drop its produce.
+    route = models.ForeignKey(Route, null=True, blank=True, on_delete=models.SET_NULL, related_name="sites")
+    drop_off = models.ForeignKey(DropOffPoint, null=True, blank=True, on_delete=models.SET_NULL, related_name="sites")
 
     class Meta:
         ordering = ["sort_order", "name"]

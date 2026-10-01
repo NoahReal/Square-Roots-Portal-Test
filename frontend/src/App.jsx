@@ -34,6 +34,7 @@ import ResetPasswordPage from './pages/portal/ResetPasswordPage'
 // so people visiting the public website download less.
 const AreaRequestsPage = lazy(() => import('./pages/portal/admin/AreaRequestsPage'))
 const WebsiteTextPage = lazy(() => import('./pages/portal/admin/WebsiteTextPage'))
+const RoutesPage = lazy(() => import('./pages/portal/admin/RoutesPage'))
 const HostReservePage = lazy(() => import('./pages/portal/host/HostReservePage'))
 const Layout = lazy(() => import('./components/Layout'))
 const AccountPage = lazy(() => import('./pages/portal/AccountPage'))
@@ -86,6 +87,7 @@ const PAGES = {
   '/portal/admin/settings': SettingsPage,
   '/portal/admin/area-requests': AreaRequestsPage,
   '/portal/admin/website-text': WebsiteTextPage,
+  '/portal/admin/routes': RoutesPage,
   '/portal/manager/order': OrderPage,
   '/portal/manager/preorders': PreordersPage,
   '/portal/manager/after-drop': AfterDropPage,

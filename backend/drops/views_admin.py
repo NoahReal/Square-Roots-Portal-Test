@@ -18,7 +18,7 @@ from accounts.notifications import notify_person
 from accounts.permissions import IsAdminRole
 from farms.models import FarmOrder, FarmOrderLine
 from farms.serializers import FarmOrderSerializer
-from .models import BUNDLE_POUNDS, BundleOrder, DropCycle, Site, SiteDrop
+from .models import BUNDLE_POUNDS, BundleOrder, DropCycle, DropOffPoint, Route, Site, SiteDrop
 from .reservations import apply_standing, tell_customers_drop_cancelled, tell_customers_drop_moved
 
 
@@ -276,13 +276,17 @@ class SiteOrderView(APIView):
 class LocationSerializer(serializers.ModelSerializer):
     people = serializers.SerializerMethodField()
     drops_this_year = serializers.SerializerMethodField()
+    route = serializers.PrimaryKeyRelatedField(queryset=Route.objects.all(), allow_null=True, required=False)
+    drop_off = serializers.PrimaryKeyRelatedField(queryset=DropOffPoint.objects.all(), allow_null=True, required=False)
+    route_name = serializers.CharField(source="route.name", default=None, read_only=True)
+    drop_off_name = serializers.CharField(source="drop_off.name", default=None, read_only=True)
 
     class Meta:
         model = Site
         fields = [
             "id", "name", "address", "instagram_url", "facebook_url", "highlight", "delivery_partner",
             "first_drop_pricing", "online_reservations", "reservation_limit", "is_active", "sort_order", "people",
-            "drops_this_year",
+            "drops_this_year", "route", "route_name", "drop_off", "drop_off_name",
         ]
         extra_kwargs = {
             "name": {"error_messages": {"blank": "Give the location a name, like “Lower Sackville”."}},
@@ -290,6 +294,13 @@ class LocationSerializer(serializers.ModelSerializer):
             "instagram_url": {"error_messages": {"invalid": "Paste the full Instagram link, starting with https://"}},
             "facebook_url": {"error_messages": {"invalid": "Paste the full Facebook link, starting with https://"}},
         }
+
+    def validate(self, data):
+        route = data.get("route", getattr(self.instance, "route", None))
+        drop_off = data.get("drop_off", getattr(self.instance, "drop_off", None))
+        if drop_off and drop_off.route_id != getattr(route, "id", None):
+            raise serializers.ValidationError({"drop_off": f"{drop_off.name} is on the {drop_off.route.name} route."})
+        return data
 
     def get_people(self, site):
         return [
@@ -308,7 +319,7 @@ class LocationListView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        sites = Site.objects.prefetch_related("people")
+        sites = Site.objects.prefetch_related("people").select_related("route", "drop_off")
         return Response(LocationSerializer(sites, many=True).data)
 
     def post(self, request):
@@ -535,3 +546,55 @@ class ImpactCsvView(APIView):
             ])
         return response
 
+
+
+# ---------- Routes ----------
+
+WEEKDAY_NAMES = dict(Route._meta.get_field("trucks_on").choices)
+
+
+def route_json(route):
+    sites = list(route.sites.all())
+    return {
+        "id": route.id,
+        "name": route.name,
+        "description": route.description,
+        "form_sent_on": WEEKDAY_NAMES[route.form_sent_on],
+        "orders_due_on": WEEKDAY_NAMES[route.orders_due_on],
+        "trucks_on": WEEKDAY_NAMES[route.trucks_on],
+        # Markets are usually the day after the trucks come; each location decides.
+        "markets_usually_on": WEEKDAY_NAMES[(route.trucks_on + 1) % 7],
+        "shares_form_with": route.shares_form_with.name if route.shares_form_with else None,
+        "suppliers": [{"id": f.id, "name": f.name, "kind": f.get_kind_display()} for f in route.suppliers.all()],
+        "drop_off_points": [
+            {
+                "id": point.id,
+                "name": point.name,
+                "hub_site": point.hub_site.name if point.hub_site else None,
+                "hub_share_percent": f"{point.hub_share_percent.normalize():f}",
+                "hub_share_supplier": point.hub_share_supplier.name if point.hub_share_supplier else None,
+                "notes": point.notes,
+                "sites": [site.name for site in sites if site.drop_off_id == point.id],
+            }
+            for point in route.drop_off_points.all()
+        ],
+        "sites": [{"id": site.id, "name": site.name, "drop_off": site.drop_off.name if site.drop_off else None} for site in sites],
+    }
+
+
+class RouteListView(APIView):
+    """The delivery routes: their weekly days, suppliers, drop-off points (hubs) and locations (Admins)."""
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        routes = Route.objects.prefetch_related(
+            "suppliers", "drop_off_points__hub_site", "drop_off_points__hub_share_supplier", "sites__drop_off"
+        ).select_related("shares_form_with")
+        unassigned = Site.objects.filter(is_active=True, route__isnull=True)
+        return Response(
+            {
+                "routes": [route_json(route) for route in routes],
+                "unassigned_sites": [{"id": site.id, "name": site.name} for site in unassigned],
+            }
+        )

@@ -427,3 +427,37 @@ class DeliveryTests(DropTestCase):
         FarmOrder.objects.create(farm=farm, drop_cycle=drop.cycle, pickup_at=timezone.now() + timedelta(days=2))
         data = self.team.get("/api/admin/dashboard/").data
         self.assertEqual(data["orders_to_send"][0]["count"], 1)
+
+
+class RouteTests(DropTestCase):
+    def setUp(self):
+        super().setUp()
+        from farms.models import Farm
+        from .models import DropOffPoint, Route
+
+        self.kettys = Farm.objects.create(name="Ketty Brow's Wholesale Limited", kind="wholesaler")
+        self.halifax = Route.objects.create(name="Halifax", form_sent_on=0, orders_due_on=1, trucks_on=4)
+        self.halifax.suppliers.set([self.kettys])
+        self.north = Route.objects.create(name="Halifax North", form_sent_on=0, orders_due_on=1, trucks_on=4, shares_form_with=self.halifax)
+        self.hub = DropOffPoint.objects.create(
+            route=self.halifax, name="Fairview hub", hub_share_percent=10, hub_share_supplier=self.kettys
+        )
+
+    def test_routes_overview(self):
+        self.team.patch(f"/api/admin/locations/{self.site.id}/", {"route": self.halifax.id, "drop_off": self.hub.id}, format="json")
+        data = self.team.get("/api/admin/routes/").data
+        halifax = data["routes"][0]
+        self.assertEqual((halifax["trucks_on"], halifax["markets_usually_on"]), ("Friday", "Saturday"))
+        self.assertEqual(halifax["drop_off_points"][0]["sites"], ["Dartmouth"])
+        self.assertEqual(halifax["drop_off_points"][0]["hub_share_percent"], "10")
+        self.assertEqual(data["routes"][1]["shares_form_with"], "Halifax")
+        self.assertEqual(data["unassigned_sites"], [{"id": self.other_site.id, "name": "Windsor"}])
+
+    def test_a_drop_off_point_must_be_on_the_locations_route(self):
+        response = self.team.patch(
+            f"/api/admin/locations/{self.site.id}/", {"route": self.north.id, "drop_off": self.hub.id}, format="json"
+        )
+        self.assertIn("is on the Halifax route", str(response.data["drop_off"]))
+
+    def test_only_admins_see_routes(self):
+        self.assertEqual(self.cm.get("/api/admin/routes/").status_code, 403)

@@ -9,9 +9,11 @@ export default function LocationsPage() {
   const [locations, setLocations] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [notice, setNotice] = useState('')
+  const [routes, setRoutes] = useState([])
 
   useEffect(() => {
     api('/admin/locations/').then(setLocations)
+    api('/admin/routes/').then((data) => setRoutes(data.routes))
   }, [])
 
   function saved(location, message) {
@@ -31,6 +33,7 @@ export default function LocationsPage() {
             <LocationForm
               key={locations?.length}
               initial={EMPTY}
+              routes={routes}
               submitLabel="Add location"
               onSave={(form) => api('/admin/locations/', { method: 'POST', body: form })}
               onSaved={(l) => saved(l, `Added ${l.name}. It's on the website now; add it to a drop cycle to open ordering.`)}
@@ -51,6 +54,7 @@ export default function LocationsPage() {
                   {editingId === location.id ? (
                     <LocationForm
                       initial={location}
+                      routes={routes}
                       submitLabel="Save changes"
                       onSave={(form) => api(`/admin/locations/${location.id}/`, { method: 'PATCH', body: form })}
                       onSaved={(l) => saved(l, `Saved ${l.name}.`)}
@@ -105,6 +109,11 @@ function LocationSummary({ location, onEdit, onToggle }) {
       {location.highlight && <p className="produce-notes">Highlight: {location.highlight}</p>}
       {location.delivery_partner && <p className="muted">Home delivery by {location.delivery_partner}</p>}
       <p className="muted">
+        {location.route_name
+          ? `${location.route_name} route · delivered to ${location.drop_off_name ?? 'drop-off point not set'}`
+          : 'Not on a route yet'}
+      </p>
+      <p className="muted">
         {location.online_reservations
           ? `Online reservations on: ${location.reservation_limit} bundles set aside per drop`
           : 'Online reservations off'}
@@ -121,7 +130,7 @@ function LocationSummary({ location, onEdit, onToggle }) {
   )
 }
 
-function LocationForm({ initial, submitLabel, onSave, onSaved, onCancel }) {
+function LocationForm({ initial, routes, submitLabel, onSave, onSaved, onCancel }) {
   const [form, setForm] = useState({
     name: initial.name,
     address: initial.address,
@@ -131,6 +140,8 @@ function LocationForm({ initial, submitLabel, onSave, onSaved, onCancel }) {
     delivery_partner: initial.delivery_partner,
     first_drop_pricing: initial.first_drop_pricing,
     online_reservations: initial.online_reservations ?? true,
+    route: initial.route ?? null,
+    drop_off: initial.drop_off ?? null,
     reservation_limit: initial.reservation_limit ?? 20,
   })
   const [errors, setErrors] = useState({})
@@ -176,6 +187,43 @@ function LocationForm({ initial, submitLabel, onSave, onSaved, onCancel }) {
         <input type="checkbox" name="first_drop_pricing" checked={form.first_drop_pricing} onChange={update} />
         New location: charge the first-drop price at its first drop
       </label>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor={idFor('route')}>Delivery route</label>
+          <select
+            id={idFor('route')}
+            value={form.route ?? ''}
+            onChange={(e) => setForm({ ...form, route: Number(e.target.value) || null, drop_off: null })}
+          >
+            <option value="">Not on a route yet</option>
+            {routes.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor={idFor('drop_off')}>Delivered to</label>
+          <select
+            id={idFor('drop_off')}
+            value={form.drop_off ?? ''}
+            disabled={!form.route}
+            onChange={(e) => setForm({ ...form, drop_off: Number(e.target.value) || null })}
+          >
+            <option value="">Choose…</option>
+            {routes
+              .find((r) => r.id === form.route)
+              ?.drop_off_points.map((point) => (
+                <option key={point.id} value={point.id}>
+                  {point.name}
+                  {point.hub_site ? ' (hub)' : ''}
+                </option>
+              ))}
+          </select>
+          {errors.drop_off && <p className="field-error">{[].concat(errors.drop_off).join(' ')}</p>}
+        </div>
+      </div>
       <label className="check">
         <input type="checkbox" name="online_reservations" checked={form.online_reservations} onChange={update} />
         Customers can reserve bundles here on the website

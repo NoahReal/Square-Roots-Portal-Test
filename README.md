@@ -26,6 +26,15 @@ licensed for Wix sites only.
 | **Host Site** | See upcoming drop dates at their location, and reserve bundles for people they support |
 | **Customers** (no account) | Reserve bundles on the website, then change or cancel them from a private link |
 
+## Ordering by route (in progress)
+
+Square Roots orders by the box from supplier price lists, on three delivery routes. Moving that from
+spreadsheets into the portal is planned in phases; **[docs/ORDERING-MODEL.md](docs/ORDERING-MODEL.md)**
+describes the model and the questions for the team. Phase 0 is built: routes, suppliers (Ketty
+Brow's and Footes), drop-off points with the Fairview hub, and each location's route, shown on the
+admin **Routes** screen and set on **Locations**. Which location is on which route is a guess until
+the team confirms it.
+
 ## Putting it online
 
 It isn't hosted yet. **[HOSTING.md](HOSTING.md)** is the step-by-step plan: production settings,

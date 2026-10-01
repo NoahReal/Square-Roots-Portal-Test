@@ -5,9 +5,16 @@ from django.utils import timezone
 
 
 class Farm(models.Model):
-    """A farm that sells seconds produce to Square Roots. Farm-role users belong to one."""
+    """A supplier Square Roots buys produce from: a farm, or a wholesaler like Ketty Brow's.
+    Farm-role users belong to one."""
+
+    class Kind(models.TextChoices):
+        FARM = "farm", "Farm"
+        WHOLESALER = "wholesaler", "Wholesaler"
 
     name = models.CharField(max_length=150, unique=True)
+    # Wholesalers only need to know what goes to each drop-off point; farms get the detailed orders.
+    kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.FARM)
     location = models.CharField(max_length=200, blank=True, help_text="Town or county, e.g. Canard, Kings County")
     pickup_notes = models.CharField(max_length=300, blank=True, help_text="Copied onto each new order from this farm.")
 

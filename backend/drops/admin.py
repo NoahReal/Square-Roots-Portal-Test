@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import BundleOrder, DropCycle, DropReport, OperatingSettings, Preorder, Site, SiteDrop, StandingReservation, WaitlistEntry
+from .models import BundleOrder, DropCycle, DropReport, DropOffPoint, OperatingSettings, Preorder, Route, Site, SiteDrop, StandingReservation, WaitlistEntry
 
 
 @admin.register(Site)
@@ -20,4 +20,4 @@ class SiteDropAdmin(admin.ModelAdmin):
     list_filter = ["cycle", "site"]
 
 
-admin.site.register([BundleOrder, Preorder, WaitlistEntry, StandingReservation, DropReport, OperatingSettings])
+admin.site.register([BundleOrder, Preorder, WaitlistEntry, StandingReservation, DropReport, OperatingSettings, Route, DropOffPoint])

@@ -35,6 +35,7 @@ urlpatterns = [
     path("admin/site-drops/<int:pk>/order/", views_admin.SiteOrderView.as_view()),
     path("admin/locations/", views_admin.LocationListView.as_view()),
     path("admin/locations/<int:pk>/", views_admin.LocationDetailView.as_view()),
+    path("admin/routes/", views_admin.RouteListView.as_view()),
     path("admin/dashboard/", views_admin.DashboardView.as_view()),
     path("admin/impact/", views_admin.ImpactView.as_view()),
     path("admin/impact.csv", views_admin.ImpactCsvView.as_view()),

@@ -18,7 +18,8 @@ from django.utils import timezone
 
 from accounts.models import Application, User
 from drops.models import (
-    BundleOrder, DropCycle, DropReport, OperatingSettings, Preorder, Site, SiteDrop, StandingReservation, WaitlistEntry,
+    BundleOrder, DropCycle, DropOffPoint, DropReport, OperatingSettings, Preorder, Route, Site, SiteDrop, StandingReservation,
+    WaitlistEntry,
     new_manage_token,
 )
 from farms.models import Farm, FarmOrder, FarmOrderLine, ProduceListing
@@ -47,6 +48,35 @@ DELIVERY_PARTNERS = {"Upper Tantallon": "BayRides"}
 
 # Made-up addresses for demo home deliveries.
 DELIVERY_ADDRESSES = ["12 Peggy's Cove Rd", "48 Hubley Mill Lake Rd", "7 Boutiliers Point Rd", "215 Hammonds Plains Rd"]
+
+# ---------- Routes (from what Square Roots told us; see docs/ORDERING-MODEL.md) ----------
+# The routes, their days and suppliers are what the team described. WHICH LOCATION IS ON WHICH ROUTE,
+# and which places the Fairview hub serves, are our guesses, to confirm with Square Roots.
+
+# The suppliers Square Roots really buys from. No made-up orders or prices are attached to them.
+SUPPLIERS = [
+    ("Ketty Brow's Wholesale Limited", "wholesaler"),
+    ("Footes Family Farm", "farm"),
+]
+
+# (name, description, form goes out, orders due, trucks, suppliers, shares its form with)
+ROUTES = [
+    ("Cape Breton", "Supplier to confirm: Ketty Brow's only, or Footes too?", 4, 0, 2, ["Ketty Brow's Wholesale Limited"], None),
+    ("Halifax", "Through the centre of Halifax", 0, 1, 4, ["Ketty Brow's Wholesale Limited", "Footes Family Farm"], None),
+    ("Halifax North", "North of Halifax and Truro", 0, 1, 4, ["Ketty Brow's Wholesale Limited", "Footes Family Farm"], "Halifax"),
+]
+
+# Guesses: which route each location is on.
+ROUTE_FOR_SITE = {
+    "Fairview / Clayton Park": "Halifax", "Halifax - South End": "Halifax", "Halifax - North End": "Halifax",
+    "Dartmouth": "Halifax", "East Dartmouth": "Halifax", "Cole Harbour": "Halifax", "Upper Tantallon": "Halifax",
+    "Lower Sackville": "Halifax North", "Windsor": "Halifax North", "Middle Musquodoboit": "Halifax North",
+    "New Glasgow": "Halifax North",
+}
+
+# The Fairview hub takes deliveries for five places and helps sort; it gets 10% of what's bought from Ketty Brow's.
+# Which five is a guess (Square Roots named the South End and North End).
+FAIRVIEW_HUB_SERVES = ["Halifax - South End", "Halifax - North End", "Dartmouth", "East Dartmouth", "Cole Harbour"]
 
 # Locations that haven't turned on online reservations yet (so the demo shows that case too).
 NO_ONLINE_RESERVATIONS = {"Middle Musquodoboit"}
@@ -188,6 +218,7 @@ class Command(BaseCommand):
         self.delete_everything()
         sites = self.create_sites()
         farms = self.create_farms()
+        self.create_routes(sites)
         users = self.create_users(sites, farms)
         counts = self.create_drop_history(sites, farms, users)
         self.create_signups(sites)
@@ -195,7 +226,8 @@ class Command(BaseCommand):
         self.create_area_requests()
 
         self.stdout.write(self.style.SUCCESS(
-            f"Created {len(SITES)} locations, {len(FARMS)} farms, {counts['cycles']} drop cycles "
+            f"Created {len(SITES)} locations, {len(ROUTES)} routes, {len(SUPPLIERS)} suppliers, "
+            f"{len(FARMS)} demo farms, {counts['cycles']} drop cycles "
             f"({counts['site_drops']} site drops), {counts['farm_orders']} farm orders, "
             f"{len(DEMO_USERS)} demo users and {len(PENDING_SIGNUPS)} pending sign-ups."
         ))
@@ -211,6 +243,7 @@ class Command(BaseCommand):
         FarmOrder.objects.all().delete()
         Farm.objects.all().delete()  # also deletes produce listings
         DropCycle.objects.all().delete()  # also deletes site drops, orders, preorders and reports
+        Route.objects.all().delete()  # also deletes drop-off points
         Site.objects.all().delete()
         ContactMessage.objects.all().delete()
         Event.objects.all().delete()
@@ -235,6 +268,36 @@ class Command(BaseCommand):
                 reservation_limit=12 if name == "Halifax - North End" else round_to(SITE_HABITS[name][0] / 2, 2),
             )
         return sites
+
+    def create_routes(self, sites):
+        """The three delivery routes, the real suppliers, and the Fairview hub (see the note at ROUTES)."""
+        suppliers = {
+            name: Farm.objects.create(name=name, kind=kind, pickup_notes="")
+            for name, kind in SUPPLIERS
+        }
+        routes = {}
+        for order, (name, description, form_day, due_day, truck_day, supplier_names, shares) in enumerate(ROUTES):
+            route = Route.objects.create(
+                name=name, description=description, form_sent_on=form_day, orders_due_on=due_day, trucks_on=truck_day,
+                shares_form_with=routes.get(shares), sort_order=order,
+            )
+            route.suppliers.set([suppliers[s] for s in supplier_names])
+            routes[name] = route
+
+        hub = DropOffPoint.objects.create(
+            route=routes["Halifax"], name="Fairview hub", hub_site=sites["Fairview / Clayton Park"],
+            hub_share_percent=Decimal("10"), hub_share_supplier=suppliers["Ketty Brow's Wholesale Limited"],
+            notes="Takes deliveries for five locations and helps sort. Which five is a guess, to confirm.",
+        )
+        for site_name, route_name in ROUTE_FOR_SITE.items():
+            site = sites[site_name]
+            site.route = routes[route_name]
+            if site_name == "Fairview / Clayton Park" or site_name in FAIRVIEW_HUB_SERVES:
+                site.drop_off = hub
+            else:
+                # Everyone else gets their own delivery.
+                site.drop_off = DropOffPoint.objects.create(route=site.route, name=site_name)
+            site.save(update_fields=["route", "drop_off"])
 
     def create_farms(self):
         farms = {}
