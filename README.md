@@ -26,14 +26,31 @@ licensed for Wix sites only.
 | **Host Site** | See upcoming drop dates at their location, and reserve bundles for people they support |
 | **Customers** (no account) | Reserve bundles on the website, then change or cancel them from a private link |
 
-## Ordering by route (in progress)
+## Ordering by the box
 
-Square Roots orders by the box from supplier price lists, on three delivery routes. Moving that from
-spreadsheets into the portal is planned in phases; **[docs/ORDERING-MODEL.md](docs/ORDERING-MODEL.md)**
-describes the model and the questions for the team. Phase 0 is built: routes, suppliers (Ketty
-Brow's and Footes), drop-off points with the Fairview hub, and each location's route, shown on the
-admin **Routes** screen and set on **Locations**. Which location is on which route is a guess until
-the team confirms it.
+Square Roots orders by the box from supplier price lists, on three delivery routes. Each route can
+switch from "order a number of bundles" to **order forms** on the admin **Routes** screen. In the
+demo, both Halifax routes have switched. How it works, step by step for each person:
+**[docs/ORDERING-GUIDE.md](docs/ORDERING-GUIDE.md)**. The model and open questions:
+**[docs/ORDERING-MODEL.md](docs/ORDERING-MODEL.md)**.
+
+- **Price Lists** (admin, under More): each supplier's prices per box for a drop, pasted from a
+  spreadsheet or a CSV, with what changed since last time. Suppliers with an account send their own
+  on their **Price List** screen.
+- **Order Forms** (admin): build a route's form from the price lists (or start from the last one),
+  open it, watch orders come in, then send it. Each supplier and route's trucks get a link to confirm
+  at `/confirm/<link>` (no login): wholesalers see totals per drop-off point, farms see each location.
+  Also a CSV of every order and printable route sheets.
+- **Order** (Community Managers on a switched route): boxes of each item, with prices, good deals,
+  last time's numbers and a running total.
+- **Hub** (`cm.fairview`, from the home screen): what arrives for each location the Fairview hub
+  takes deliveries for, a sorting checklist, and its share.
+- Opening a form sets each location's market day (the day after the trucks) and the reservation
+  deadline, so the customer side follows the route. Once a form is sent, customers' "What's in your
+  bundle" shows their own location's order.
+
+Demo: log in as `admin` (Order Forms), `cm.dartmouth` (hasn't ordered yet on the open form),
+`cm.fairview` (the hub). Supplier prices and transport companies in the demo are made up.
 
 ## Putting it online
 
@@ -85,6 +102,7 @@ Every demo password is **`squareroots`**. The portal login page lists these acco
 | `cm.dartmouth` | Jordan MacLeod | Community Manager (Dartmouth) |
 | `cm.northend` | Aisha Rahman | Community Manager (Halifax - North End) |
 | `cm.sackville` | Liam Boudreau | Community Manager (Lower Sackville) |
+| `cm.fairview` | Noor Haddad | Community Manager (Fairview / Clayton Park, which runs the Fairview hub) |
 | `farm.gaspereau` | Ruth Eisenhauer | Farm (Gaspereau Valley Growers) |
 | `farm.canard` | Tom Van Dyk | Farm (Canard Creek Farm) |
 | `host.dartmouth` | Grace Oickle | Host Site (Dartmouth) |
@@ -260,7 +278,7 @@ screen. **The first-drop price ($3.75) is a sample**; the real one hasn't been c
   - **Settings**: bundle prices, first-drop price, delivery fee and the sorting space.
 - **Developer tools** (linked from the admin home page): every API endpoint, plus login testing tools.
 
-**Community Manager** (`cm.dartmouth`, `cm.northend`, `cm.sackville`)
+**Community Manager** (`cm.dartmouth`, `cm.northend`, `cm.sackville`, `cm.fairview`)
 - **Order**: a big +/− counter for bundles, with the cutoff countdown, preorder count and how the
   last drop went. Orders lock at the cutoff (the server enforces this too).
 - **Preorders**: add customers with their price (standard, at cost or free) and, where offered, home

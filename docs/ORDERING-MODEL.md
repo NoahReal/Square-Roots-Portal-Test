@@ -1,6 +1,8 @@
-# How ordering will work: the model to check with Square Roots
+# How ordering works: the model to check with Square Roots
 
-This is Phase 0 of moving Square Roots' weekly ordering from spreadsheets into the partner portal.
+This describes how the partner portal handles Square Roots' weekly ordering by the box. All six
+phases are built (see [ORDERING-GUIDE.md](ORDERING-GUIDE.md) for how to use it); the guesses and
+questions below still need the team's answers.
 It describes what the portal will keep track of, using Square Roots' own words where possible.
 **Please check it with the team before anything more is built.** Anything marked *(guess)* is
 something we assumed.
@@ -23,29 +25,29 @@ The operation runs on a two-week cycle.
 **Routes.** Cape Breton, Halifax (through the centre) and Halifax North (north of Halifax and
 Truro). Each has the day its form goes out, the day orders are due, the day trucks deliver, and the
 suppliers it buys from. Halifax North uses the same order form as Halifax.
-*Built in Phase 0: see Routes in the admin menu.*
+*Built: see Routes in the admin menu.*
 
 **Suppliers.** Ketty Brow's Wholesale Limited (a wholesaler) and Footes Family Farm (a farm).
 A wholesaler is only told *what goes where*: how much goes to each drop-off point. A farm gets the
-full, detailed orders. *Built in Phase 0.*
+full, detailed orders. *Built.*
 
 **Drop-off points.** Where a truck leaves produce. Usually a location's own market. A **hub** takes
 deliveries for several locations and helps sort them: the Fairview hub does this for five places
-and gets 10% of what's bought from Ketty Brow's. *Built in Phase 0, with guesses (below).*
+and gets 10% of what's bought from Ketty Brow's. *Built, with guesses (below).*
 
-**Locations.** Each belongs to one route and one drop-off point. *Built in Phase 0: set on the
+**Locations.** Each belongs to one route and one drop-off point. *Built: set on the
 Locations screen.*
 
-**Price lists** *(Phase 1).* Each supplier's list for the week: product, box size, price per box,
+**Price lists** *(built).* Each supplier's list for the week: product, box size, price per box,
 how many are available. The portal shows what changed since last week.
 
-**Order forms** *(Phase 2).* One per route per cycle: the items chosen from the price lists, with
+**Order forms** *(built).* One per route per cycle: the items chosen from the price lists, with
 good deals marked. Replaces the spreadsheet with a tab per location.
 
-**Location orders** *(Phase 2).* How many boxes of each item a location wants, with the total boxes
+**Location orders** *(built).* How many boxes of each item a location wants, with the total boxes
 and cost worked out. Replaces typing into the highlighted cells.
 
-**Supplier orders and transport runs** *(Phase 3).* Made from the location orders when ordering
+**Supplier orders and transport runs** *(built).* Made from the location orders when ordering
 closes: Ketty Brow's gets totals per drop-off point; farms get the detail; each route's trucks get
 their stops. Each is confirmed from a link. Replaces screenshots and confirmation emails.
 
@@ -57,7 +59,8 @@ their stops. Each is confirmed from a link. Replaces screenshots and confirmatio
 | Halifax North route: Lower Sackville, Windsor, Middle Musquodoboit, New Glasgow | Locations screen |
 | Cape Breton route: no locations yet. Iona is one, but it isn't in the website's list, so we need its details. | Locations screen (add it) |
 | The Fairview hub serves the South End, North End, Dartmouth, East Dartmouth and Cole Harbour (you named the first two) | Locations screen |
-| Cape Breton buys only from Ketty Brow's | Routes (Phase 1 adds editing) |
+| Cape Breton buys only from Ketty Brow's | Django admin for now (Routes shows it) |
+| The Fairview hub's 10% is worked out from Ketty Brow's orders for the locations it serves, not its own | `hub_share` in backend/ordering/logic.py |
 
 ## Questions for the team
 
