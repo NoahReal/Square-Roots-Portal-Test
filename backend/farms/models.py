@@ -15,6 +15,8 @@ class Farm(models.Model):
     name = models.CharField(max_length=150, unique=True)
     # Wholesalers only need to know what goes to each drop-off point; farms get the detailed orders.
     kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.FARM)
+    # Where order confirmations go, for suppliers without a portal account.
+    contact_email = models.EmailField(blank=True)
     location = models.CharField(max_length=200, blank=True, help_text="Town or county, e.g. Canard, Kings County")
     pickup_notes = models.CharField(max_length=300, blank=True, help_text="Copied onto each new order from this farm.")
 

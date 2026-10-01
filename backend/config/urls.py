@@ -29,6 +29,7 @@ urlpatterns = [
     path("api/admin/people/<int:pk>/password-reset/", account_admin_views.SendPasswordResetView.as_view()),
     path("api/", include("drops.urls")),
     path("api/", include("farms.urls")),
+    path("api/", include("ordering.urls")),
     path("api/contact/", website_views.ContactView.as_view()),
     path("api/area-requests/", website_views.AreaRequestView.as_view()),
     path("api/site-text/", website_views.SiteTextView.as_view()),

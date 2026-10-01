@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'farms',
     'website',
     'data_import',
+    'ordering',
 ]
 
 MIDDLEWARE = [

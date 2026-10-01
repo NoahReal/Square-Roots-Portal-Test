@@ -70,6 +70,13 @@ class Route(models.Model):
         "self", null=True, blank=True, on_delete=models.SET_NULL, help_text="Uses the same order form as this route."
     )
     sort_order = models.PositiveIntegerField(default=0)
+    # Switch a route over when it's ready: its locations then order boxes from an order form
+    # instead of a number of bundles. Each route can switch on its own.
+    uses_order_forms = models.BooleanField(default=False)
+    transport = models.ForeignKey(
+        "ordering.TransportCompany", null=True, blank=True, on_delete=models.SET_NULL, related_name="routes",
+        help_text="Who drives this route's trucks.",
+    )
 
     class Meta:
         ordering = ["sort_order", "name"]
