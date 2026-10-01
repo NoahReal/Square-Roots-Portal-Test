@@ -11,6 +11,7 @@ import './public.css'
 import './farm.css'
 import './screens.css'
 import './dashboard.css'
+import './orders.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

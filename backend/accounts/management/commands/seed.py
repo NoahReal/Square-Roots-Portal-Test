@@ -78,6 +78,30 @@ ROUTE_FOR_SITE = {
 # Which five is a guess (Square Roots named the South End and North End).
 FAIRVIEW_HUB_SERVES = ["Halifax - South End", "Halifax - North End", "Dartmouth", "East Dartmouth", "Cole Harbour"]
 
+# ---------- Ordering by the box (made-up prices and companies, for the demo) ----------
+
+# Routes switched to order forms in the demo. Cape Breton has no locations yet.
+ORDER_FORM_ROUTES = ["Halifax", "Halifax North"]
+
+TRANSPORT_COMPANIES = [
+    ("Harbourview Freight (demo)", "Halifax", "dispatch@harbourview.example"),
+    ("Cobequid Carriers (demo)", "Halifax North", "runs@cobequid.example"),
+]
+
+# Made-up price lists: (product, box size, price last time, price this time, boxes available)
+DEMO_PRICE_LISTS = {
+    "Ketty Brow's Wholesale Limited": [
+        ("Carrots", "50 lb", "21.00", "22.50", 60), ("Yellow onions", "50 lb", "24.00", "24.00", 40),
+        ("Russet potatoes", "50 lb", "18.00", "16.50", 80), ("Green cabbage", "50 lb", "19.00", "15.00", 30),
+        ("Beets", "25 lb", "16.00", "16.00", 25), ("Rutabaga", "50 lb", "17.50", "17.50", 20),
+        ("Sweet potatoes", "40 lb", "34.00", "36.00", 15), ("Apples (Cortland)", "40 lb", "28.00", "26.00", 35),
+    ],
+    "Footes Family Farm": [
+        ("Butternut squash", "40 lb", "22.00", "20.00", 20), ("Kale", "case of 24", "26.00", "28.00", 10),
+        ("Parsnips", "25 lb", "18.00", "18.00", 15), ("Leeks", "case of 12", None, "16.00", 12),
+    ],
+}
+
 # Locations that haven't turned on online reservations yet (so the demo shows that case too).
 NO_ONLINE_RESERVATIONS = {"Middle Musquodoboit"}
 
@@ -102,11 +126,15 @@ DEMO_USERS = [
     ("cm.dartmouth", "Jordan", "MacLeod", User.Role.COMMUNITY_MANAGER, "Dartmouth"),
     ("cm.northend", "Aisha", "Rahman", User.Role.COMMUNITY_MANAGER, "Halifax - North End"),
     ("cm.sackville", "Liam", "Boudreau", User.Role.COMMUNITY_MANAGER, "Lower Sackville"),
+    ("cm.fairview", "Noor", "Haddad", User.Role.COMMUNITY_MANAGER, "Fairview / Clayton Park"),
     ("farm.gaspereau", "Ruth", "Eisenhauer", User.Role.FARM, None),
     ("farm.canard", "Tom", "Van Dyk", User.Role.FARM, None),
     ("host.dartmouth", "Grace", "Oickle", User.Role.HOST_SITE, "Dartmouth"),
 ]
-DEMO_PHONES = {"cm.dartmouth": "902-555-0123", "cm.northend": "902-555-0167", "cm.sackville": "902-555-0184"}
+DEMO_PHONES = {
+    "cm.dartmouth": "902-555-0123", "cm.northend": "902-555-0167", "cm.sackville": "902-555-0184",
+    "cm.fairview": "902-555-0112",
+}
 
 # Fictional farms: (name, location, pickup notes, demo username, share of each order, what they sell with $/lb)
 FARMS = [
@@ -221,6 +249,7 @@ class Command(BaseCommand):
         self.create_routes(sites)
         users = self.create_users(sites, farms)
         counts = self.create_drop_history(sites, farms, users)
+        self.create_ordering(sites, users)
         self.create_signups(sites)
         self.create_events()
         self.create_area_requests()
@@ -239,6 +268,11 @@ class Command(BaseCommand):
             self.stdout.write(f"  {username:<20} {role.label}, waiting for approval")
 
     def delete_everything(self):
+        from ordering.models import OrderForm, PriceList, TransportCompany
+
+        OrderForm.objects.all().delete()  # also deletes their items, location orders and confirmations
+        PriceList.objects.all().delete()
+        TransportCompany.objects.all().delete()
         User.objects.filter(is_superuser=False).delete()  # also deletes their applications
         FarmOrder.objects.all().delete()
         Farm.objects.all().delete()  # also deletes produce listings
@@ -298,6 +332,83 @@ class Command(BaseCommand):
                 # Everyone else gets their own delivery.
                 site.drop_off = DropOffPoint.objects.create(route=site.route, name=site_name)
             site.save(update_fields=["route", "drop_off"])
+
+    def create_ordering(self, sites, users):
+        """Order forms for the Halifax routes: this week's (ordering closed, sent, confirmed) and the
+        next drop's (open, with some locations still to order)."""
+        from ordering.logic import send_for_confirmation, sync_market_days
+        from ordering.models import (
+            Confirmation, LocationOrder, LocationOrderLine, OrderForm, OrderFormItem, PriceItem, PriceList, TransportCompany,
+        )
+
+        rnd = random.Random(31)  # separate, so this doesn't change the rest of the demo
+        routes = {r.name: r for r in Route.objects.all()}
+        for name, route_name, email in TRANSPORT_COMPANIES:
+            company = TransportCompany.objects.create(name=name, email=email)
+            routes[route_name].transport = company
+            routes[route_name].save(update_fields=["transport"])
+        for name in ORDER_FORM_ROUTES:
+            routes[name].uses_order_forms = True
+            routes[name].save(update_fields=["uses_order_forms"])
+
+        today = self.today
+        # This week's drop (ordering has closed) and the next one (ordering open).
+        last_cycle = DropCycle.objects.filter(drop_date__gte=today, order_cutoff__lte=timezone.now()).order_by("drop_date").first()
+        if last_cycle is None:
+            last_cycle = DropCycle.objects.filter(drop_date__lt=today).order_by("-drop_date").first()
+        next_cycle = DropCycle.objects.filter(drop_date__gt=today, order_cutoff__gt=timezone.now()).order_by("drop_date").first()
+        suppliers = {f.name: f for f in Farm.objects.filter(name__in=DEMO_PRICE_LISTS)}
+        for cycle, column in [(last_cycle, 2), (next_cycle, 3)]:
+            for supplier_name, rows in DEMO_PRICE_LISTS.items():
+                price_list = PriceList.objects.create(
+                    supplier=suppliers[supplier_name], cycle=cycle, received_on=min(today, cycle.drop_date - timedelta(days=8))
+                )
+                for row in rows:
+                    if row[column] is not None:
+                        PriceItem.objects.create(
+                            price_list=price_list, product=row[0], box_size=row[1], price=Decimal(row[column]), available=row[4]
+                        )
+
+        halifax_routes = [routes[n] for n in ORDER_FORM_ROUTES]
+        manager_for = {u.site_id: u for u in users.values() if u.role == User.Role.COMMUNITY_MANAGER}
+        for cycle, state in [(last_cycle, "sent"), (next_cycle, "open")]:
+            from ordering.logic import suggested_dates
+
+            delivery, due = suggested_dates(halifax_routes[0], cycle)
+            form = OrderForm.objects.create(
+                cycle=cycle, delivery_date=delivery, orders_due=due, status=OrderForm.Status.OPEN,
+                published_at=timezone.now(),
+                notes="Great prices on cabbage and potatoes this week." if state == "open" else "",
+            )
+            form.routes.set(halifax_routes)
+            for order, price_item in enumerate(PriceItem.objects.filter(price_list__cycle=cycle).select_related("price_list")):
+                deal = "good" if price_item.product in ("Green cabbage", "Russet potatoes") and state == "open" else ""
+                OrderFormItem.objects.create(
+                    form=form, supplier=price_item.price_list.supplier, price_item=price_item, product=price_item.product,
+                    box_size=price_item.box_size, price=price_item.price, available=price_item.available, deal=deal,
+                    sort_order=order,
+                )
+            sync_market_days(form)
+            items = list(form.items.all())
+            for site in Site.objects.filter(route__in=halifax_routes):
+                # Next drop: some locations haven't ordered yet, including Dartmouth (so the demo can order there).
+                if state == "open" and (site.name == "Dartmouth" or rnd.random() < 0.4):
+                    continue
+                order = LocationOrder.objects.create(form=form, site=site, updated_by=manager_for.get(site.id))
+                for item in rnd.sample(items, rnd.randint(3, 6)):
+                    LocationOrderLine.objects.create(order=order, item=item, boxes=rnd.randint(1, 4))
+            if state == "sent":
+                form.orders_due = min(form.orders_due, timezone.now() - timedelta(days=1))
+                form.save(update_fields=["orders_due"])
+                send_for_confirmation(form, "http://localhost:5173", notify=False)
+                for confirmation in form.confirmations.all():
+                    if confirmation.supplier and confirmation.supplier.name == "Footes Family Farm":
+                        confirmation.status, confirmation.reply = Confirmation.Status.CANT, "Only 8 boxes of kale this week, sorry."
+                    else:
+                        confirmation.status = Confirmation.Status.CONFIRMED
+                    # In real use these were emailed; the demo just doesn't print the emails.
+                    confirmation.sent_at = confirmation.replied_at = timezone.now()
+                    confirmation.save()
 
     def create_farms(self):
         farms = {}

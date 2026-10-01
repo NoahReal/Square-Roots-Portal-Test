@@ -29,7 +29,7 @@ function setMeta(attribute, name, content) {
 }
 
 export function updateSearchTags(pathname, title) {
-  const isPrivate = pathname.startsWith('/portal') || pathname.startsWith('/reserve/manage')
+  const isPrivate = pathname.startsWith('/portal') || pathname.startsWith('/reserve/manage') || pathname.startsWith('/confirm/')
   const description = DESCRIPTIONS[pathname] ?? DEFAULT_DESCRIPTION
   setMeta('name', 'description', description)
   setMeta('name', 'robots', isPrivate ? 'noindex, nofollow' : 'index, follow')

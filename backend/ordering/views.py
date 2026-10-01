@@ -43,7 +43,11 @@ def cycles_to_choose():
     today = timezone.localdate()
     upcoming = list(DropCycle.objects.filter(drop_date__gte=today).order_by("drop_date")[:3])
     past = list(DropCycle.objects.filter(drop_date__lt=today).order_by("-drop_date")[:3])
-    return [{"id": c.id, "name": c.name, "drop_date": c.drop_date, "upcoming": c.drop_date >= today} for c in past[::-1] + upcoming]
+    now = timezone.now()
+    return [
+        {"id": c.id, "name": c.name, "drop_date": c.drop_date, "upcoming": c.drop_date >= today, "ordering_open": c.order_cutoff > now}
+        for c in past[::-1] + upcoming
+    ]
 
 
 def suppliers_on_routes():
@@ -208,6 +212,7 @@ def form_summary(form):
         "status": form.status,
         "status_label": form.get_status_display(),
         "ordering_open": form.ordering_open,
+        "sent_at": form.sent_at,
         "locations": len(sites),
         "locations_ordered": len([s for s in sites if s.id in ordered]),
         **totals(lines_for(form)),

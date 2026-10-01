@@ -7,13 +7,19 @@ import PageHero from '../../../components/PageHero'
 // Phase 0 of the ordering work (see docs/ORDERING-MODEL.md): for checking the setup with the team.
 export default function RoutesPage() {
   const [data, setData] = useState(null)
+  const [setup, setSetup] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     api('/admin/routes/')
       .then(setData)
       .catch((err) => setError(err.message))
+    api('/admin/ordering/').then(setSetup)
   }, [])
+
+  async function changeRoute(routeId, changes) {
+    setSetup(await api(`/admin/ordering/routes/${routeId}/`, { method: 'PATCH', body: changes }))
+  }
 
   return (
     <>
@@ -47,6 +53,14 @@ export default function RoutesPage() {
                 <Day label="Trucks deliver" day={route.trucks_on} />
                 <Day label="Markets, usually" day={route.markets_usually_on} />
               </div>
+
+              {setup && (
+                <RouteOrdering
+                  route={setup.routes.find((r) => r.id === route.id)}
+                  companies={setup.transport_companies}
+                  onChange={(changes) => changeRoute(route.id, changes)}
+                />
+              )}
 
               <p>
                 <strong>Buys from:</strong>{' '}
@@ -84,6 +98,8 @@ export default function RoutesPage() {
             </article>
           ))}
 
+          {setup && <AddCompany onAdded={async () => setSetup(await api('/admin/ordering/'))} />}
+
           {data?.unassigned_sites.length > 0 && (
             <div className="notice notice-info">
               Not on a route yet: {data.unassigned_sites.map((s) => s.name).join(', ')}.
@@ -101,5 +117,78 @@ function Day({ label, day }) {
       <span className="stat-label">{label}</span>
       <span className="stat-value">{day}</span>
     </div>
+  )
+}
+
+// How a route orders (bundles, or boxes from order forms) and who drives its trucks.
+function RouteOrdering({ route, companies, onChange }) {
+  return (
+    <div className="route-ordering">
+      <label className="check">
+        <input type="checkbox" checked={route.uses_order_forms} onChange={(e) => onChange({ uses_order_forms: e.target.checked })} />
+        <span>
+          <strong>Orders from order forms</strong>
+          <span className="field-hint">
+            {' '}
+            {route.uses_order_forms
+              ? 'Its locations order boxes of each item on the Order Forms screen.'
+              : 'Its locations still order a number of bundles. Switch on when the route is ready.'}
+          </span>
+        </span>
+      </label>
+      <div className="field">
+        <label htmlFor={`transport-${route.id}`}>Trucks driven by</label>
+        <select id={`transport-${route.id}`} value={route.transport ?? ''} onChange={(e) => onChange({ transport: Number(e.target.value) || null })}>
+          <option value="">Not set</option>
+          {companies.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
+
+function AddCompany({ onAdded }) {
+  const [form, setForm] = useState({ name: '', contact_name: '', email: '', phone: '' })
+  const [error, setError] = useState('')
+  const update = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+
+  async function add(event) {
+    event.preventDefault()
+    setError('')
+    try {
+      await api('/admin/transport-companies/', { method: 'POST', body: form })
+      setForm({ name: '', contact_name: '', email: '', phone: '' })
+      onAdded()
+    } catch (err) {
+      setError([].concat(err.data?.name ?? err.data?.email ?? err.message).join(' '))
+    }
+  }
+
+  return (
+    <form className="block block-white" onSubmit={add} noValidate>
+      <h2>Add a transport company</h2>
+      <p className="muted">They get a link to confirm each run. Their email is where the link goes.</p>
+      <div className="field-row">
+        {[
+          ['name', 'Company name'],
+          ['contact_name', 'Contact person'],
+          ['email', 'Email'],
+          ['phone', 'Phone'],
+        ].map(([name, label]) => (
+          <div className="field" key={name}>
+            <label htmlFor={`company-${name}`}>{label}</label>
+            <input id={`company-${name}`} name={name} value={form[name]} onChange={update} />
+          </div>
+        ))}
+      </div>
+      {error && <p className="field-error">{error}</p>}
+      <button className="btn btn-small" disabled={!form.name.trim()}>
+        Add company
+      </button>
+    </form>
   )
 }

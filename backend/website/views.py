@@ -251,6 +251,7 @@ def robots(request):
         "User-agent: *",
         "Disallow: /portal/",
         "Disallow: /reserve/manage/",
+        "Disallow: /confirm/",
         "Disallow: /api/",
         f"Sitemap: {site_address(request)}/sitemap.xml",
     ]

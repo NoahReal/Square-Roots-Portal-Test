@@ -192,22 +192,23 @@ def confirmation_link(confirmation, site_url):
     return f"{site_url.rstrip('/')}/confirm/{confirmation.token}"
 
 
-def send_for_confirmation(form, site_url):
+def send_for_confirmation(form, site_url, notify=True):
     """When ordering closes: one link per supplier with orders, and one per route's trucks.
-    Emails whoever we have an address for; the screen shows the links to share any other way."""
+    Emails whoever we have an address for (unless `notify` is False, as in the demo data);
+    the screen shows the links to share any other way."""
     suppliers = Farm.objects.filter(id__in=lines_for(form).values("item__supplier")).distinct()
     made = []
     for supplier in suppliers:
         confirmation, _ = Confirmation.objects.get_or_create(form=form, kind=Confirmation.Kind.SUPPLIER, supplier=supplier)
         made.append(confirmation)
         emails = [supplier.contact_email] if supplier.contact_email else [u.email for u in supplier.people.all() if u.email]
-        email(confirmation, emails, f"Square Roots order for delivery {say_date(form.delivery_date)}", site_url)
+        email(confirmation, emails if notify else [], f"Square Roots order for delivery {say_date(form.delivery_date)}", site_url)
     for route in form.routes.all():
         confirmation, _ = Confirmation.objects.get_or_create(
             form=form, kind=Confirmation.Kind.TRANSPORT, route=route, defaults={"company": route.transport}
         )
         made.append(confirmation)
-        if route.transport and route.transport.email:
+        if notify and route.transport and route.transport.email:
             email(confirmation, [route.transport.email], f"Square Roots {route.name} run on {say_date(form.delivery_date)}", site_url)
     form.status = OrderForm.Status.SENT
     form.sent_at = timezone.now()

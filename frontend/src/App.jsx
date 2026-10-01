@@ -23,6 +23,7 @@ import ManageReservationPage from './pages/site/ManageReservationPage'
 import BundlePage from './pages/site/BundlePage'
 import PrivacyPage from './pages/site/PrivacyPage'
 import RequestLocationPage from './pages/site/RequestLocationPage'
+import ConfirmPage from './pages/site/ConfirmPage'
 
 // Partner portal: signing in is part of the public website...
 import LoginPage from './pages/portal/LoginPage'
@@ -35,6 +36,10 @@ import ResetPasswordPage from './pages/portal/ResetPasswordPage'
 const AreaRequestsPage = lazy(() => import('./pages/portal/admin/AreaRequestsPage'))
 const WebsiteTextPage = lazy(() => import('./pages/portal/admin/WebsiteTextPage'))
 const RoutesPage = lazy(() => import('./pages/portal/admin/RoutesPage'))
+const PriceListsPage = lazy(() => import('./pages/portal/admin/PriceListsPage'))
+const OrderFormsPage = lazy(() => import('./pages/portal/admin/OrderFormsPage'))
+const HubPage = lazy(() => import('./pages/portal/manager/HubPage'))
+const SupplierPriceListPage = lazy(() => import('./pages/portal/farm/PriceListPage'))
 const HostReservePage = lazy(() => import('./pages/portal/host/HostReservePage'))
 const Layout = lazy(() => import('./components/Layout'))
 const AccountPage = lazy(() => import('./pages/portal/AccountPage'))
@@ -88,6 +93,10 @@ const PAGES = {
   '/portal/admin/area-requests': AreaRequestsPage,
   '/portal/admin/website-text': WebsiteTextPage,
   '/portal/admin/routes': RoutesPage,
+  '/portal/admin/price-lists': PriceListsPage,
+  '/portal/admin/order-forms': OrderFormsPage,
+  '/portal/manager/hub': HubPage,
+  '/portal/farm/price-list': SupplierPriceListPage,
   '/portal/manager/order': OrderPage,
   '/portal/manager/preorders': PreordersPage,
   '/portal/manager/after-drop': AfterDropPage,
@@ -134,6 +143,7 @@ const PUBLIC_TITLES = {
 function titleFor(pathname) {
   if (pathname.startsWith('/signup/')) return 'Partner Sign-up | Square Roots'
   if (pathname.startsWith('/reserve/manage/')) return 'Your Reservation | Square Roots'
+  if (pathname.startsWith('/confirm/')) return 'Confirm an Order | Square Roots'
   if (PUBLIC_TITLES[pathname]) {
     return `${PUBLIC_TITLES[pathname]} | Square Roots${pathname.startsWith('/portal') ? ' Partner Portal' : ''}`
   }
@@ -190,6 +200,7 @@ export default function App() {
               <Route path="/whats-in-the-bundle" element={<BundlePage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/request-a-location" element={<RequestLocationPage />} />
+            <Route path="/confirm/:token" element={<ConfirmPage />} />
 
               <Route path="/portal/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
               <Route path="/portal/pending" element={<PendingPage />} />

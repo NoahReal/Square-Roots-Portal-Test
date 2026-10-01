@@ -12,16 +12,26 @@ class UserSerializer(serializers.ModelSerializer):
     site_name = serializers.CharField(source="site.name", default=None, read_only=True)
     farm_name = serializers.CharField(source="farm.name", default=None, read_only=True)
     two_step = serializers.SerializerMethodField()
+    uses_order_forms = serializers.SerializerMethodField()
+    runs_hub = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             "id", "username", "first_name", "last_name", "email", "phone", "role", "role_label",
-            "status", "status_label", "site_name", "farm_name", "two_step",
+            "status", "status_label", "site_name", "farm_name", "two_step", "uses_order_forms", "runs_hub",
         ]
 
     def get_two_step(self, user):
         return bool(user.two_step_secret)
+
+    def get_uses_order_forms(self, user):
+        """Whether this person's location orders boxes from order forms (its route has switched over)."""
+        return bool(user.site and user.site.route and user.site.route.uses_order_forms)
+
+    def get_runs_hub(self, user):
+        """Whether this person's location is a hub that takes deliveries for other locations (like Fairview)."""
+        return bool(user.site and user.site.hubs_run.exists())
 
 
 class AccountSerializer(serializers.ModelSerializer):

@@ -5,9 +5,31 @@ import { useAuth } from '../../../auth'
 import { dateAndTime, longDate, pounds, timeLeft, timeRange } from '../../../format'
 import PageHero from '../../../components/PageHero'
 import Stepper from '../../../components/Stepper'
+import LocationOrderForm from '../../../components/ordering/LocationOrderForm'
 
-// Community Manager screen: choose how many bundles you need for each drop, before the cutoff.
+// Community Manager screen: order for your location before the cutoff. Locations whose route has
+// switched to order forms choose boxes of each item; the others choose a number of bundles.
 export default function OrderPage() {
+  const { user } = useAuth()
+  if (user.uses_order_forms) {
+    return (
+      <>
+        <PageHero title="Order" lead="Choose how many boxes of each item you need, before the deadline.">
+          {user.site_name && <p className="hero-meta">Ordering for {user.site_name}</p>}
+        </PageHero>
+        <section className="section">
+          <div className="container container-narrow">
+            <LocationOrderForm siteName={user.site_name} />
+          </div>
+        </section>
+      </>
+    )
+  }
+  return <BundleOrderPage />
+}
+
+// Ordering a number of 10 lb bundles (for routes that haven't switched to order forms).
+function BundleOrderPage() {
   const { user } = useAuth()
   const [drops, setDrops] = useState(null)
   const [error, setError] = useState('')

@@ -12,13 +12,15 @@ export const ROLES = {
     nav: [
       { to: '/portal/admin', label: 'Home' },
       { to: '/portal/admin/cycles', label: 'Drop Cycles', description: 'Set order cutoffs, drop dates and hours for each site.' },
+      { to: '/portal/admin/order-forms', label: 'Order Forms', description: 'Build each route’s order form, see who has ordered, and send it to suppliers and trucks.' },
       { to: '/portal/admin/orders', label: 'Orders', description: 'See every site’s bundle order and the purchase list for each farm.' },
-      { to: '/portal/admin/farms', label: 'Farms', description: 'See what farms have available and decide who supplies what.' },
+      { to: '/portal/admin/farms', label: 'Farms', more: true, description: 'See what farms have available and decide who supplies what.' },
       { to: '/portal/admin/impact', label: 'Impact', description: 'Pounds diverted, bundles sold, sites active. Download as CSV.' },
       { to: '/portal/admin/packing', label: 'Packing & Delivery', more: true, description: 'What arrives from farms, how to pack bundles, and where they go.' },
       { to: '/portal/admin/money', label: 'Money', more: true, description: 'What each drop collected and owes, and payments received.' },
       { to: '/portal/admin/signups', label: 'Sign-ups', more: true, description: 'Approve or decline people who signed up on the website.' },
       { to: '/portal/admin/people', label: 'People', more: true, description: 'Everyone with an account: their location or farm, access and passwords.' },
+      { to: '/portal/admin/price-lists', label: 'Price Lists', more: true, description: 'Each supplier’s prices per box this cycle, and what changed.' },
       { to: '/portal/admin/routes', label: 'Routes', more: true, description: 'Delivery routes, their days, suppliers and drop-off hubs.' },
       { to: '/portal/admin/locations', label: 'Locations', more: true, description: 'Add and edit Square Roots locations shown on the website.' },
       { to: '/portal/admin/website-text', label: 'Website Text', more: true, description: 'Change the words on the public website.' },
@@ -37,6 +39,7 @@ export const ROLES = {
       { to: '/portal/manager/order', label: 'Order', description: 'Choose how many bundles you need before the cutoff.' },
       { to: '/portal/manager/preorders', label: 'Preorders', description: 'Keep a list of customers who have reserved a bundle.' },
       { to: '/portal/manager/after-drop', label: 'After Drop', description: 'Log bundles sold and anything left over.' },
+      { to: '/portal/manager/hub', label: 'Hub', hidden: true, description: 'What arrives for each location your hub takes deliveries for.' },
     ],
   },
   farm: {
@@ -45,6 +48,7 @@ export const ROLES = {
     welcome: 'Tell us what seconds produce you have, confirm orders, and see pickups and payments.',
     nav: [
       { to: '/portal/farm', label: 'Home' },
+      { to: '/portal/farm/price-list', label: 'Price List', description: 'Send your prices per box for the next drop.' },
       { to: '/portal/farm/produce', label: 'Produce', description: 'Post what seconds produce you have and how much.' },
       { to: '/portal/farm/pickups', label: 'Pickups', description: 'Confirm orders and see pickup dates and payment status.' },
     ],

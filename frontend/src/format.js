@@ -97,3 +97,8 @@ export function addDays(isoDate, days) {
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
+
+// boxes(1) -> "1 box", boxes(3) -> "3 boxes"
+export function boxes(count) {
+  return `${count} ${count === 1 ? 'box' : 'boxes'}`
+}

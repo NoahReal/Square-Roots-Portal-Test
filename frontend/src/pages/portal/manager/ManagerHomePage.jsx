@@ -10,20 +10,40 @@ import { ScreenCards, TodoList } from '../../../components/Dashboard'
 export default function ManagerHomePage() {
   const { user } = useAuth()
   const [drops, setDrops] = useState(null)
+  const [forms, setForms] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     api('/manager/drops/')
       .then(setDrops)
       .catch((err) => setError(err.message))
-  }, [])
+    // Locations whose route has switched to order forms order boxes instead of bundles.
+    if (user.uses_order_forms) api('/manager/order-forms/').then((data) => setForms(data.forms))
+  }, [user.uses_order_forms])
 
   const next = drops?.find((d) => !d.has_happened)
   const openNotOrdered = drops?.filter((d) => d.ordering_open && d.bundles === null) ?? []
   const toLog = drops?.filter((d) => d.has_happened && d.bundles !== null && !d.report) ?? []
 
   const items = []
-  if (openNotOrdered[0]) {
+  const openForm = forms.find((f) => f.ordering_open)
+  if (openForm) {
+    items.push({
+      title: openForm.my_order.boxes ? `Your order: ${openForm.my_order.boxes} boxes` : 'Fill in this week’s order form',
+      detail: `Due ${dateAndTime(openForm.orders_due)} (${timeLeft(openForm.orders_due)}). Trucks deliver ${longDate(openForm.delivery_date)}.`,
+      to: '/portal/manager/order',
+      action: openForm.my_order.boxes ? 'Change it' : 'Order now',
+    })
+  }
+  if (user.runs_hub) {
+    items.push({
+      title: 'Your hub',
+      detail: 'What arrives for each location you take deliveries for, and your share for sorting.',
+      to: '/portal/manager/hub',
+      action: 'Open',
+    })
+  }
+  if (!user.uses_order_forms && openNotOrdered[0]) {
     const drop = openNotOrdered[0]
     items.push({
       title: `Order for the ${drop.cycle_name}`,

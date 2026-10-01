@@ -235,3 +235,41 @@ def bundle_contents(cycle):
             }
         )
     return result
+
+
+def bundle_for(site_drop):
+    """What's in the bundles at one location's drop. Locations whose route orders from order forms
+    get their own order (once it's sent to suppliers); others get the cycle's farm purchases."""
+    site = site_drop.site
+    if site.route_id and site.route.uses_order_forms:
+        from ordering.models import LocationOrderLine, OrderForm
+
+        lines = LocationOrderLine.objects.filter(
+            order__site=site, order__form__cycle=site_drop.cycle, order__form__status=OrderForm.Status.SENT, boxes__gt=0
+        ).select_related("item__supplier")
+        return [
+            {
+                "produce": line.item.product,
+                # Bundles are made up from boxes by the location, so there's no exact weight per bundle.
+                "pounds_per_bundle": None,
+                "farms": [{"name": line.item.supplier.name, "location": line.item.supplier.location}],
+            }
+            for line in lines
+        ]
+    return bundle_contents(site_drop.cycle)
+
+
+def order_form_bundle(cycle):
+    """Everything ordered across locations on a cycle's sent order forms, for the public bundle page."""
+    from ordering.models import LocationOrderLine, OrderForm
+
+    items = {}
+    for line in LocationOrderLine.objects.filter(
+        order__form__cycle=cycle, order__form__status=OrderForm.Status.SENT, boxes__gt=0
+    ).select_related("item__supplier"):
+        item = items.setdefault(line.item.product, {"produce": line.item.product, "pounds_per_bundle": None, "farms": {}})
+        item["farms"][line.item.supplier.name] = line.item.supplier.location
+    return [
+        {**item, "farms": [{"name": n, "location": l} for n, l in sorted(item["farms"].items())]}
+        for item in sorted(items.values(), key=lambda i: i["produce"])
+    ]

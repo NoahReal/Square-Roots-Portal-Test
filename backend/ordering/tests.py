@@ -178,3 +178,25 @@ class HubTests(OrderingTestCase):
         self.assertEqual(hub["forms"][0]["locations"][0]["name"], "North End")
         self.assertEqual(hub["forms"][0]["share"], "6.60")
         self.assertEqual(self.manager.get("/api/manager/hub/").data["hubs"], [])
+
+
+class CustomerSideTests(OrderingTestCase):
+    def test_a_customers_bundle_comes_from_their_locations_order_once_sent(self):
+        form = self.open_form()
+        self.order(self.manager, form, {"Carrots": 3, "Apples": 2})
+        self.north_end.online_reservations = True
+        self.north_end.save()
+        drop = SiteDrop.objects.get(site=self.north_end, cycle=self.cycle)
+        from drops.reservations import bundle_for
+
+        self.assertEqual(bundle_for(drop), [])  # not sent to suppliers yet
+        self.team.post(f"/api/admin/order-forms/{form['id']}/send/", format="json")
+        products = sorted(i["produce"] for i in bundle_for(drop))
+        self.assertEqual(products, ["Apples", "Carrots"])
+        public = APIClient().get("/api/bundle/").data
+        self.assertEqual(sorted(i["produce"] for i in public["items"]), ["Apples", "Carrots"])
+
+    def test_customers_can_reserve_until_orders_are_due(self):
+        form = self.open_form()
+        drop = SiteDrop.objects.get(site=self.north_end, cycle=self.cycle)
+        self.assertEqual(drop.order_cutoff, OrderForm.objects.get(pk=form["id"]).orders_due)

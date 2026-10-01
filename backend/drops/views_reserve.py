@@ -20,8 +20,8 @@ from .models import (
     new_manage_token,
 )
 from .reservations import (
-    MAX_BUNDLES_PER_RESERVATION, already_reserved, amount_due, apply_standing, bundle_contents, bundles_left, digits,
-    farm_cost_per_bundle, pay_it_forward_this_year, promote_waitlist, reservable_drops, send_confirmation,
+    MAX_BUNDLES_PER_RESERVATION, already_reserved, amount_due, apply_standing, bundle_contents, bundle_for, bundles_left,
+    digits, farm_cost_per_bundle, order_form_bundle, pay_it_forward_this_year, promote_waitlist, reservable_drops, send_confirmation,
     send_waitlist_joined, waitlist_position,
 )
 
@@ -201,7 +201,7 @@ def reservation_json(reservation):
         "pay_it_forward": f"{reservation.pay_it_forward:.2f}",
         "every_drop": reservation.standing_id is not None,
         "language": reservation.language,
-        "bundle": bundle_contents(site_drop.cycle),
+        "bundle": bundle_for(site_drop),
         "has_happened": site_drop.has_happened,
         "feedback": "" if waiting else reservation.feedback,
         "impact": customer_impact(reservation.email),
@@ -382,6 +382,15 @@ class BundleView(APIView):
 
     def get(self, request):
         today = timezone.localdate()
+        # Order forms first (routes that have switched over), then the older farm purchases.
+        form_cycle = (
+            DropCycle.objects.filter(order_forms__status="sent", drop_date__gte=today).order_by("drop_date").first()
+            or DropCycle.objects.filter(order_forms__status="sent").order_by("-drop_date").first()
+        )
+        if form_cycle:
+            items = order_form_bundle(form_cycle)
+            if items:
+                return Response({"drop_date": form_cycle.drop_date, "upcoming": form_cycle.drop_date >= today, "items": items})
         sent = DropCycle.objects.filter(farm_orders__sent_at__isnull=False).distinct()
         cycle = sent.filter(drop_date__gte=today).order_by("drop_date").first() or sent.order_by("-drop_date").first()
         if cycle is None:

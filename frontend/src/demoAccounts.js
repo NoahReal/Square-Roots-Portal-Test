@@ -7,6 +7,7 @@ export const DEMO_ACCOUNTS = [
   { username: 'cm.dartmouth', who: 'Jordan MacLeod', role: 'Community Manager' },
   { username: 'cm.northend', who: 'Aisha Rahman', role: 'Community Manager' },
   { username: 'cm.sackville', who: 'Liam Boudreau', role: 'Community Manager' },
+  { username: 'cm.fairview', who: 'Noor Haddad', role: 'Community Manager (Fairview hub)' },
   { username: 'farm.gaspereau', who: 'Ruth Eisenhauer', role: 'Farm' },
   { username: 'farm.canard', who: 'Tom Van Dyk', role: 'Farm' },
   { username: 'host.dartmouth', who: 'Grace Oickle', role: 'Host Site' },
